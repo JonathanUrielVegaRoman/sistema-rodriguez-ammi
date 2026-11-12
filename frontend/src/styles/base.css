@@ -1,0 +1,524 @@
+/* Base de la interfaz: tokens de color, tipografia y componentes comunes.
+   Los estilos parten de AppSalon (Poppins, azul #0da6f3, rojo #cb0000,
+   verde #329f00, negro #1a1b15, botones grandes y en negritas, entradas
+   redondeadas sin borde). AppSalon era solo oscuro; aqui el tema claro es el
+   predeterminado y el oscuro conserva su paleta original.
+
+   Tema: sin data-theme sigue la configuracion del sistema/navegador
+   (prefers-color-scheme). data-theme="light" o "dark" lo fija el selector. */
+
+:root {
+  /* Superficies */
+  --fondo: #f4f6f9;
+  --superficie: #ffffff;
+  --superficie-2: #eef2f6;
+  --entrada-fondo: #f1f4f8;
+
+  /* Texto */
+  --texto: #1a1b15;
+  --texto-medio: #4b5160;
+  --texto-tenue: #737a89;
+  --linea: #e1e1e1;
+  --linea-tenue: #eceef2;
+
+  /* Marca: el azul de AppSalon, oscurecido para que el texto azul y los
+     botones con letra blanca se lean bien sobre blanco. */
+  --marca: #0877b0;
+  --marca-fuerte: #06628f;
+  --marca-viva: #0da6f3;
+  --marca-tenue: #e3f4fd;
+  --marca-texto: #ffffff;
+
+  --rojo: #b80000;
+  --rojo-solido: #cb0000;
+  --rojo-fondo: #fdeaea;
+  --verde: #2a7d00;
+  --verde-solido: #329f00;
+  --verde-fondo: rgba(50, 159, 0, 0.14);
+  --ambar: #9a5b00;
+  --ambar-texto: #6b4200;
+  --ambar-fondo: #fff4e0;
+
+  --sombra: 0 1px 2px rgba(26, 27, 21, 0.06), 0 8px 24px rgba(26, 27, 21, 0.06);
+  --sombra-modal: 0 24px 60px rgba(26, 27, 21, 0.25);
+  --velo: rgba(26, 27, 21, 0.45);
+
+  --fuente: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --radio: 1rem;
+  --radio-chico: 0.6rem;
+
+  color-scheme: light;
+}
+
+/* Paleta oscura: la de AppSalon. Se repite para la preferencia del sistema y
+   para la eleccion manual. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fondo: #1a1b15;
+    --superficie: #23241d;
+    --superficie-2: #2d2e26;
+    --entrada-fondo: #2f3028;
+    --texto: #ffffff;
+    --texto-medio: #d2d3cc;
+    --texto-tenue: #9c9d95;
+    --linea: #3b3c33;
+    --linea-tenue: #303128;
+    --marca: #0da6f3;
+    --marca-fuerte: #0b8fd1;
+    --marca-viva: #0da6f3;
+    --marca-tenue: rgba(13, 166, 243, 0.14);
+    --marca-texto: #ffffff;
+    --rojo: #ff6b6b;
+    --rojo-solido: #cb0000;
+    --rojo-fondo: rgba(203, 0, 0, 0.18);
+    --verde: #6fd13a;
+    --verde-solido: #329f00;
+    --verde-fondo: rgba(50, 159, 0, 0.22);
+    --ambar: #f0a63a;
+    --ambar-texto: #f5c27a;
+    --ambar-fondo: rgba(240, 166, 58, 0.12);
+    --sombra: none;
+    --sombra-modal: 0 24px 60px rgba(0, 0, 0, 0.6);
+    --velo: rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --fondo: #1a1b15;
+  --superficie: #23241d;
+  --superficie-2: #2d2e26;
+  --entrada-fondo: #2f3028;
+  --texto: #ffffff;
+  --texto-medio: #d2d3cc;
+  --texto-tenue: #9c9d95;
+  --linea: #3b3c33;
+  --linea-tenue: #303128;
+  --marca: #0da6f3;
+  --marca-fuerte: #0b8fd1;
+  --marca-viva: #0da6f3;
+  --marca-tenue: rgba(13, 166, 243, 0.14);
+  --marca-texto: #ffffff;
+  --rojo: #ff6b6b;
+  --rojo-solido: #cb0000;
+  --rojo-fondo: rgba(203, 0, 0, 0.18);
+  --verde: #6fd13a;
+  --verde-solido: #329f00;
+  --verde-fondo: rgba(50, 159, 0, 0.22);
+  --ambar: #f0a63a;
+  --ambar-texto: #f5c27a;
+  --ambar-fondo: rgba(240, 166, 58, 0.12);
+  --sombra: none;
+  --sombra-modal: 0 24px 60px rgba(0, 0, 0, 0.6);
+  --velo: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+/* --- Reinicio y tipografia --- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--fuente);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--fondo);
+  color: var(--texto);
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+/* Titulos de AppSalon: peso 900, centrados en las pantallas de formulario. */
+h1,
+h2,
+h3,
+h4 {
+  color: var(--texto);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.nombre-pagina {
+  font-size: clamp(1.9rem, 4vw, 2.5rem);
+  font-weight: 900;
+  text-align: center;
+  margin: 0 0 0.5rem;
+}
+
+.descripcion-pagina {
+  text-align: center;
+  color: var(--texto-medio);
+  font-size: 1.05rem;
+  margin-bottom: 2rem;
+}
+
+.seccion-titulo {
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-align: center;
+  margin-bottom: 0.4rem;
+}
+
+.seccion-descripcion {
+  text-align: center;
+  color: var(--texto-medio);
+  margin-bottom: 1.75rem;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--marca);
+}
+
+img {
+  max-width: 100%;
+}
+
+/* "pH" dentro de un texto en mayusculas: no debe volverse "PH". */
+.sin-mayus {
+  text-transform: none;
+}
+
+/* Cifras alineadas: pH, folios, conteos. */
+.cifra {
+  font-variant-numeric: tabular-nums;
+}
+
+.texto-tenue {
+  color: var(--texto-tenue);
+  font-size: 0.85rem;
+}
+
+.texto-centro {
+  text-align: center;
+}
+
+/* --- Botones (mixin "boton" de AppSalon) --- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.6rem;
+  border: 2px solid transparent;
+  border-radius: var(--radio-chico);
+  background: var(--superficie-2);
+  color: var(--texto);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 300ms ease, border-color 300ms ease, transform 150ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--linea);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--marca-viva);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn--primario {
+  background: var(--marca);
+  color: var(--marca-texto);
+}
+
+.btn--primario:hover:not(:disabled) {
+  background: var(--marca-fuerte);
+}
+
+.btn--peligro {
+  background: var(--rojo-solido);
+  color: #fff;
+}
+
+.btn--peligro:hover:not(:disabled) {
+  background: #a30000;
+}
+
+.btn--contorno {
+  background: transparent;
+  border-color: var(--linea);
+}
+
+.btn--contorno:hover:not(:disabled) {
+  background: var(--superficie-2);
+}
+
+.btn--texto {
+  background: none;
+  padding-inline: 0.25rem;
+  color: var(--marca);
+  font-weight: 600;
+}
+
+.btn--texto:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
+}
+
+.btn--bloque {
+  width: 100%;
+}
+
+/* --- Formularios --- */
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.etiqueta {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--texto-medio);
+}
+
+.entrada {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 2px solid transparent;
+  border-radius: var(--radio);
+  background: var(--entrada-fondo);
+  color: var(--texto);
+  transition: border-color 200ms ease, background-color 200ms ease;
+}
+
+.entrada::placeholder {
+  color: var(--texto-tenue);
+}
+
+.entrada:focus {
+  outline: none;
+  border-color: var(--marca-viva);
+  background: var(--superficie);
+}
+
+.entrada:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+textarea.entrada {
+  resize: vertical;
+}
+
+.casilla {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.35rem 0;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.casilla input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0.2rem 0 0;
+  flex: none;
+  accent-color: var(--marca);
+}
+
+/* --- Alertas en linea (AppSalon: bloque de color, negritas, mayusculas) --- */
+
+.alerta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radio-chico);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.alerta svg {
+  flex: none;
+}
+
+.alerta--error {
+  background: var(--rojo-solido);
+}
+
+.alerta--exito {
+  background: var(--verde-solido);
+}
+
+.alerta--info {
+  background: var(--marca);
+  color: var(--marca-texto);
+}
+
+/* Aviso sereno (no es error): textos de prototipo, advertencias clinicas. */
+.aviso-barra {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.9rem;
+  border-left: 4px solid var(--ambar);
+  border-radius: 0 var(--radio-chico) var(--radio-chico) 0;
+  background: var(--ambar-fondo);
+  color: var(--ambar-texto);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.aviso-barra svg {
+  flex: none;
+  margin-top: 0.15rem;
+}
+
+.mensaje-error {
+  padding: 0.75rem 0.9rem;
+  border-left: 4px solid var(--rojo-solido);
+  border-radius: 0 var(--radio-chico) var(--radio-chico) 0;
+  background: var(--rojo-fondo);
+  color: var(--rojo);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* --- Modal de alerta (equivalente al SweetAlert de AppSalon) --- */
+
+.modal-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: var(--velo);
+  animation: aparecer 180ms ease-out;
+}
+
+.modal {
+  width: min(32rem, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding: 2rem 1.75rem 1.5rem;
+  border-radius: 1.25rem;
+  background: var(--superficie);
+  box-shadow: var(--sombra-modal);
+  text-align: center;
+  animation: emerger 220ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.modal-icono {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  border: 4px solid currentColor;
+}
+
+.modal-icono--info {
+  color: var(--marca-viva);
+}
+
+.modal-icono--exito {
+  color: var(--verde-solido);
+}
+
+.modal-icono--aviso {
+  color: var(--ambar);
+}
+
+.modal-titulo {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+}
+
+.modal-cuerpo {
+  color: var(--texto-medio);
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.modal-cuerpo > * + * {
+  margin-top: 0.75rem;
+}
+
+.modal-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes emerger {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-velo,
+  .modal {
+    animation: none;
+  }
+
+  body,
+  .btn {
+    transition: none;
+  }
+}

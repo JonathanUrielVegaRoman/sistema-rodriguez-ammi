@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  pom.xml = la "lista del súper" del backend.
+  Maven lee este archivo para saber:
+    1. Qué librerías (dependencias) descargar de internet.
+    2. Con qué versión de Java compilar.
+    3. Cómo empaquetar todo en un solo archivo .jar que se ejecuta con:  java -jar sistema.jar
+  Casi nunca lo vas a editar; cuando quieras agregar una librería, se agrega aquí dentro de <dependencies>.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- "Heredamos" la configuración recomendada de Spring Boot (versiones compatibles entre sí). -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.7</version>
+        <relativePath/>
+    </parent>
+
+    <!-- Identidad del proyecto -->
+    <groupId>mx.rodriguezammi</groupId>
+    <artifactId>sistema</artifactId>
+    <version>0.1.0</version>
+    <name>Sistema Rodríguez + AMMI</name>
+    <description>Óptica RODRÍGUEZ y Papelería AMMI</description>
+
+    <properties>
+        <!-- Versión de Java con la que se compila. Funciona con JDK 21 o más nuevo. -->
+        <java.version>21</java.version>
+    </properties>
+
+    <dependencies>
+        <!-- WEB: permite crear la API REST (los "Controllers" que reciben peticiones HTTP). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- JPA: convierte clases de Java (Entities) en tablas de la base de datos, sin escribir SQL. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- VALIDATION: reglas como @NotBlank o @Positive para rechazar datos mal capturados. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Driver de PostgreSQL: el "traductor" entre Java y la base de datos real. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- H2: base de datos de juguete que vive en memoria. Sirve para probar sin instalar PostgreSQL
+             (perfil "h2") y para las pruebas automáticas. Al apagar el programa, se borra todo. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- DEVTOOLS: reinicia el servidor solo cuando guardas cambios (solo en desarrollo). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- PRUEBAS automáticas (JUnit, etc.). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Empaqueta todo en un .jar ejecutable. -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,26 @@
+# .gitignore = lista de cosas que Git debe IGNORAR (no subir a GitHub).
+
+# --- Backend (Java / Maven) ---
+backend/target/
+backend/archivos-demo/
+*.class
+*.log
+
+# El frontend compilado se genera con "npm run build"; no se sube.
+backend/src/main/resources/static/
+
+# Configuración local con contraseñas reales: NUNCA se sube.
+backend/src/main/resources/application-local.properties
+.env
+
+# --- Frontend (Node) ---
+frontend/node_modules/
+frontend/dist/
+
+# --- Editores y sistema ---
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
