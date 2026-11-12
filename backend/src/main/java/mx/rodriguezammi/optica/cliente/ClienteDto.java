@@ -42,13 +42,14 @@ public final class ClienteDto {
             Integer edad,
             boolean aceptaPromociones,
             String notas,
-            LocalDateTime fechaRegistro
+            LocalDateTime fechaRegistro,
+            boolean activo
     ) {
         public static Respuesta desde(Cliente c) {
             Integer edad = c.getFechaNacimiento() == null ? null
                     : Period.between(c.getFechaNacimiento(), LocalDate.now()).getYears();
             return new Respuesta(c.getId(), c.getNombre(), c.getCelular(), c.getFechaNacimiento(), edad,
-                    c.isAceptaPromociones(), c.getNotas(), c.getFechaRegistro());
+                    c.isAceptaPromociones(), c.getNotas(), c.getFechaRegistro(), c.isActivo());
         }
     }
 }

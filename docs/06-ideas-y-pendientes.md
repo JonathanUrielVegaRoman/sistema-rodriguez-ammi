@@ -17,6 +17,10 @@
 | Fotos reducidas en el celular antes de subirlas | Una foto de 5 MB pasa a ~200 KB: la cuadrícula carga rápido aunque haya cientos |
 | WhatsApp con enlace prellenado (no automático) | La API de WhatsApp Business requiere trámite con Meta y cuesta |
 | Óptica reporta dinero que ENTRÓ (anticipos + liquidaciones) | Es lo que coincide con la caja de cada día |
+| Impresión directa desde el backend (Java + PDFBox) | El backend corre en la misma PC que tiene la impresora: así se imprime desde el celular, sin abrir pestañas ni Ctrl+P. Solo PDF e imágenes; Word/Excel necesitan Office |
+| Excel con Apache POI | Fechas, horas y montos como valores reales de Excel (se pueden filtrar y sumar) |
+| Sesión de admin en `sessionStorage` + cierre al salir de #/admin | Pedido del dueño: si se sale de Administración, aunque sea por error, ya no se ven las ventas |
+| Clientes: borrar o archivar | Borrar a alguien con órdenes rompería el historial de ventas; archivarlo lo oculta sin perder dinero |
 | `ddl-auto=update` | Cómodo para empezar; ver pendiente "Flyway" |
 
 ## ✅ Ya implementado (antes eran ideas)
@@ -25,6 +29,12 @@
   solos a las 24 horas.
 - **Cumpleaños**: cada mañana se generan cupones (15 %, 30 días) para quien cumple y aceptó promociones; botón de WhatsApp.
 - **Acceso**: PIN del personal + contraseña del dueño.
+
+## Ideas para después
+- **Tickets directo a la impresora** (sin el cuadro de Ctrl+P): usar el mismo mecanismo del buzón
+  para mandar el ticket a una impresora térmica, o abrir Chrome con `--kiosk-printing` en la PC del mostrador.
+- **Cancelar o devolver una venta de la papelería** (solo el administrador), regresando la mercancía al inventario.
+- **Reimprimir tickets** buscando por folio.
 
 ## Pendientes, en orden sugerido
 

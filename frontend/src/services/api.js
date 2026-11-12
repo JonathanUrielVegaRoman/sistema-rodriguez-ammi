@@ -58,14 +58,36 @@ async function peticion(ruta, { metodo = "GET", cuerpo, formulario } = {}) {
   return datos
 }
 
-/** Descarga un archivo protegido y lo abre en otra pestaña (para imprimir los archivos del buzón). */
-async function abrirArchivo(ruta) {
+/**
+  Pide un archivo protegido (con los pases) y lo devuelve como "blob" (datos binarios).
+  Se usa para imágenes de vista previa, archivos del buzón y el Excel.
+*/
+async function obtenerBlob(ruta) {
   const respuesta = await fetch(BASE + ruta, { headers: encabezadosDeAcceso() })
   if (!respuesta.ok) {
     const datos = await respuesta.json().catch(() => null)
-    throw new Error(datos?.mensaje ?? "No se pudo abrir el archivo")
+    throw new Error(datos?.mensaje ?? "No se pudo obtener el archivo")
   }
-  const blob = await respuesta.blob()
+  return { blob: await respuesta.blob(), disposicion: respuesta.headers.get("Content-Disposition") }
+}
+
+/** Descarga un archivo protegido con su nombre (ej. el Excel de ventas). */
+async function descargar(ruta, nombrePorDefecto) {
+  const { blob, disposicion } = await obtenerBlob(ruta)
+  const nombre = /filename="?([^";]+)"?/.exec(disposicion ?? "")?.[1] ?? nombrePorDefecto
+  const url = URL.createObjectURL(blob)
+  const enlace = document.createElement("a")
+  enlace.href = url
+  enlace.download = nombre
+  document.body.appendChild(enlace)
+  enlace.click()
+  enlace.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+/** Abre un archivo protegido en otra pestaña (para Word/Excel del buzón, que no se imprimen directo). */
+async function abrirArchivo(ruta) {
+  const { blob } = await obtenerBlob(ruta)
   const url = URL.createObjectURL(blob)
   const enlace = document.createElement("a")
   enlace.href = url
@@ -98,6 +120,12 @@ export const accesoApi = {
   info: () => peticion("/publico/info"),
 }
 
+/** Cierra la sesión del administrador en el servidor y la olvida en este dispositivo. */
+export async function cerrarSesionAdmin() {
+  await accesoApi.salirAdmin().catch(() => {})
+  sesion.olvidarAdmin()
+}
+
 // ---------------- Papelería ----------------
 
 export const productosApi = {
@@ -121,6 +149,14 @@ export const impresionesApi = {
   // Personal
   cola: () => peticion("/papeleria/impresiones"),
   abrirArchivo: (id, archivoId) => abrirArchivo(`/papeleria/impresiones/${id}/archivos/${archivoId}`),
+  impresoras: () => peticion("/papeleria/impresiones/impresoras"),
+  info: (id, archivoId) => peticion(`/papeleria/impresiones/${id}/archivos/${archivoId}/info`),
+  /** Devuelve una URL temporal con la imagen de la vista previa. */
+  vistaPrevia: async (id, archivoId, pagina, color) => {
+    const { blob } = await obtenerBlob(`/papeleria/impresiones/${id}/archivos/${archivoId}/vista-previa` + consulta({ pagina, color }))
+    return URL.createObjectURL(blob)
+  },
+  imprimir: (id, archivoId, opciones) => peticion(`/papeleria/impresiones/${id}/archivos/${archivoId}/imprimir`, { metodo: "POST", cuerpo: opciones }),
   impreso: (id, hojas) => peticion(`/papeleria/impresiones/${id}/impreso`, { metodo: "POST", cuerpo: { hojas } }),
   cobrar: (id, metodoPago, pagaCon) => peticion(`/papeleria/impresiones/${id}/cobrar`, { metodo: "POST", cuerpo: { metodoPago, pagaCon } }),
   cancelar: (id) => peticion(`/papeleria/impresiones/${id}/cancelar`, { metodo: "POST" }),
@@ -133,6 +169,8 @@ export const clientesApi = {
   obtener: (id) => peticion(`/optica/clientes/${id}`),
   crear: (c) => peticion("/optica/clientes", { metodo: "POST", cuerpo: c }),
   actualizar: (id, c) => peticion(`/optica/clientes/${id}`, { metodo: "PUT", cuerpo: c }),
+  eliminar: (id) => peticion(`/optica/clientes/${id}`, { metodo: "DELETE" }),
+  restaurar: (id) => peticion(`/optica/clientes/${id}/restaurar`, { metodo: "POST" }),
   recetas: (id) => peticion(`/optica/clientes/${id}/recetas`),
   crearReceta: (id, r) => peticion(`/optica/clientes/${id}/recetas`, { metodo: "POST", cuerpo: r }),
   ordenes: (id) => peticion(`/optica/clientes/${id}/ordenes`),
@@ -179,4 +217,6 @@ export const promocionesApi = {
 export const reportesApi = {
   generar: (desde, hasta) => peticion("/admin/reportes" + consulta({ desde, hasta })),
   corte: (dia) => peticion("/admin/reportes/corte" + consulta({ dia })),
+  /** Sin fechas = todo el historial. */
+  excel: (desde, hasta) => descargar("/admin/reportes/excel" + consulta({ desde, hasta }), "ventas.xlsx"),
 }

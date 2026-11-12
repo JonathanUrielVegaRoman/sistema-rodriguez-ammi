@@ -1,26 +1,40 @@
 package mx.rodriguezammi.optica.cliente;
 
 import mx.rodriguezammi.comun.exception.RecursoNoEncontradoException;
+import mx.rodriguezammi.optica.orden.OrdenRepository;
+import mx.rodriguezammi.optica.promocion.CuponRepository;
+import mx.rodriguezammi.optica.receta.RecetaRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/** Reglas de negocio de clientes. Compáralo con ProductoService: es el mismo patrón. */
+/**
+ * Reglas de negocio de clientes: el CRUD completo (Crear, Leer, Actualizar, Borrar).
+ * Compáralo con ProductoService: es el mismo patrón.
+ */
 @Service
 @Transactional(readOnly = true)
 public class ClienteService {
 
     private final ClienteRepository repositorio;
+    private final OrdenRepository ordenes;
+    private final RecetaRepository recetas;
+    private final CuponRepository cupones;
 
-    public ClienteService(ClienteRepository repositorio) {
+    public ClienteService(ClienteRepository repositorio, OrdenRepository ordenes,
+                          RecetaRepository recetas, CuponRepository cupones) {
         this.repositorio = repositorio;
+        this.ordenes = ordenes;
+        this.recetas = recetas;
+        this.cupones = cupones;
     }
 
     public List<ClienteDto.Respuesta> buscar(String texto) {
         List<Cliente> clientes = (texto == null || texto.isBlank())
-                ? repositorio.findTop30ByOrderByFechaRegistroDesc()
-                : repositorio.findTop50ByNombreContainingIgnoreCaseOrCelularContainingOrderByNombreAsc(texto.trim(), texto.trim());
+                ? repositorio.findTop30ByActivoTrueOrderByFechaRegistroDesc()
+                : repositorio.buscarActivos(texto.trim(), PageRequest.of(0, 50));
         return clientes.stream().map(ClienteDto.Respuesta::desde).toList();
     }
 
@@ -44,6 +58,35 @@ public class ClienteService {
         cliente.setFechaNacimiento(datos.fechaNacimiento());
         cliente.setAceptaPromociones(datos.aceptaPromociones());
         cliente.setNotas(vacioANull(datos.notas()));
+        return ClienteDto.Respuesta.desde(cliente);
+    }
+
+    public enum ResultadoEliminar { ELIMINADO, ARCHIVADO }
+
+    /**
+     * BORRAR un cliente, con una regla para no perder dinero del historial:
+     *   - Si NO tiene órdenes → se borra de verdad (con sus graduaciones y cupones).
+     *   - Si SÍ tiene órdenes → se ARCHIVA: desaparece de búsquedas y cumpleaños, pero sus
+     *     órdenes y pagos siguen contando en los reportes.
+     */
+    @Transactional
+    public ResultadoEliminar eliminar(Long id) {
+        Cliente cliente = buscarEntidad(id);
+        if (ordenes.existsByClienteId(id)) {
+            cliente.setActivo(false);
+            return ResultadoEliminar.ARCHIVADO;
+        }
+        recetas.deleteByClienteId(id);
+        cupones.deleteByClienteId(id);
+        repositorio.delete(cliente);
+        return ResultadoEliminar.ELIMINADO;
+    }
+
+    /** Devuelve un cliente archivado a la lista. */
+    @Transactional
+    public ClienteDto.Respuesta restaurar(Long id) {
+        Cliente cliente = buscarEntidad(id);
+        cliente.setActivo(true);
         return ClienteDto.Respuesta.desde(cliente);
     }
 

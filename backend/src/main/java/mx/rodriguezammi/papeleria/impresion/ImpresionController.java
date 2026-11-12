@@ -23,6 +23,10 @@ import java.util.List;
  * PERSONAL (con PIN):
  *   GET  /api/papeleria/impresiones                          la cola
  *   GET  /api/papeleria/impresiones/{id}/archivos/{archivo}  descargar para imprimir
+ *   GET  /api/papeleria/impresiones/impresoras                       impresoras instaladas en la PC
+ *   GET  /api/papeleria/impresiones/{id}/archivos/{archivo}/info       páginas y si se puede imprimir directo
+ *   GET  /api/papeleria/impresiones/{id}/archivos/{archivo}/vista-previa?pagina=1&color=true   PNG
+ *   POST /api/papeleria/impresiones/{id}/archivos/{archivo}/imprimir   { impresora, copias, color, papel... }
  *   POST /api/papeleria/impresiones/{id}/impreso             { hojas }
  *   POST /api/papeleria/impresiones/{id}/cobrar              { metodoPago, pagaCon } → ticket
  *   POST /api/papeleria/impresiones/{id}/cancelar
@@ -31,9 +35,11 @@ import java.util.List;
 public class ImpresionController {
 
     private final ImpresionService servicio;
+    private final ImpresoraService impresora;
 
-    public ImpresionController(ImpresionService servicio) {
+    public ImpresionController(ImpresionService servicio, ImpresoraService impresora) {
         this.servicio = servicio;
+        this.impresora = impresora;
     }
 
     public record Impreso(@Min(1) int hojas) {
@@ -77,6 +83,30 @@ public class ImpresionController {
                 // Nunca guardar copias en caché: son archivos privados de clientes.
                 .cacheControl(CacheControl.noStore())
                 .body(recurso);
+    }
+
+    @GetMapping("/api/papeleria/impresiones/impresoras")
+    public ImpresoraService.Impresoras impresoras() {
+        return impresora.impresoras();
+    }
+
+    @GetMapping("/api/papeleria/impresiones/{id}/archivos/{archivoId}/info")
+    public ImpresionService.InfoArchivo info(@PathVariable Long id, @PathVariable Long archivoId) {
+        return servicio.info(id, archivoId);
+    }
+
+    @GetMapping(value = "/api/papeleria/impresiones/{id}/archivos/{archivoId}/vista-previa", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> vistaPrevia(@PathVariable Long id, @PathVariable Long archivoId,
+                                              @RequestParam(defaultValue = "1") int pagina,
+                                              @RequestParam(defaultValue = "true") boolean color) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .contentType(MediaType.IMAGE_PNG).body(servicio.vistaPrevia(id, archivoId, pagina, color));
+    }
+
+    @PostMapping("/api/papeleria/impresiones/{id}/archivos/{archivoId}/imprimir")
+    public ImpresoraService.Resultado imprimir(@PathVariable Long id, @PathVariable Long archivoId,
+                                               @RequestBody ImpresoraService.Opciones opciones) {
+        return servicio.imprimirArchivo(id, archivoId, opciones);
     }
 
     @PostMapping("/api/papeleria/impresiones/{id}/impreso")

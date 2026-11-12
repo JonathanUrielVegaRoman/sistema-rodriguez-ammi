@@ -42,6 +42,14 @@ public class Cliente {
     @Column(name = "fecha_registro", nullable = false)
     private LocalDateTime fechaRegistro = LocalDateTime.now();
 
+    /**
+     * false = ARCHIVADO: el cliente ya no aparece en búsquedas ni recibe felicitaciones, pero sus
+     * órdenes siguen existiendo (no se pierde el historial de ventas). Ver ClienteService.eliminar.
+     * "default true" permite agregar la columna sin borrar los clientes que ya existen.
+     */
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean activo = true;
+
     protected Cliente() {
     }
 
@@ -70,4 +78,7 @@ public class Cliente {
     public void setNotas(String notas) { this.notas = notas; }
 
     public LocalDateTime getFechaRegistro() { return fechaRegistro; }
+
+    public boolean isActivo() { return activo; }
+    public void setActivo(boolean activo) { this.activo = activo; }
 }

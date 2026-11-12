@@ -4,12 +4,14 @@ import { fechaHora, NOMBRES_PAGO } from "../../utils/formato"
 import { ir } from "../../hooks/useRuta"
 import Ticket from "../../components/Ticket"
 import Icono from "../../components/Icono"
+import ImprimirArchivo from "../../components/ImprimirArchivo"
 
 /*
   COLA DEL BUZÓN DE IMPRESIÓN (lado del personal).
 
   Cada tarjeta es un turno que mandó un cliente desde su celular:
-    1. "Abrir" cada archivo → se abre en otra pestaña → Imprimir (Ctrl+P).
+    1. Tocar cada archivo → ventana con VISTA PREVIA y opciones → "Imprimir" lo manda directo
+       a la impresora de la PC (PDF e imágenes). Word/Excel se abren para imprimir con su programa.
     2. "Ya lo imprimí" → anotar cuántas hojas salieron en total.
     3. "Cobrar y entregar" → se registra como venta de papelería, sale el ticket
        y LOS ARCHIVOS SE BORRAN (privacidad del cliente).
@@ -80,6 +82,7 @@ export default function Impresiones() {
 function TarjetaTurno({ t, accion, alCobrar }) {
   const [hojas, setHojas] = useState(t.hojas ?? "")
   const [metodo, setMetodo] = useState("EFECTIVO")
+  const [imprimiendo, setImprimiendo] = useState(null) // archivo abierto en la ventana de impresión
 
   async function cobrar() {
     const ticket = await accion(impresionesApi.cobrar(t.id, metodo, null))
@@ -103,12 +106,28 @@ function TarjetaTurno({ t, accion, alCobrar }) {
       <ul className="lista-archivos">
         {t.archivos.map((a) => (
           <li key={a.id}>
-            <button className="btn btn--contorno btn--chico" disabled={!a.disponible} onClick={() => accion(impresionesApi.abrirArchivo(t.id, a.id))}>
-              <Icono nombre="documento" /> {a.nombre}
+            {/* PDF e imágenes: ventana de impresión directa. Word/Excel: se abren para imprimir con su programa. */}
+            <button
+              className="btn btn--contorno btn--chico"
+              disabled={!a.disponible}
+              onClick={() => (a.imprimible ? setImprimiendo(a) : accion(impresionesApi.abrirArchivo(t.id, a.id)))}
+              title={a.imprimible ? "Ver e imprimir" : "Abrir para imprimir con Word/Excel"}
+            >
+              <Icono nombre={a.imprimible ? "impresora" : "documento"} /> {a.nombre}
             </button>
           </li>
         ))}
       </ul>
+
+      {imprimiendo && (
+        <ImprimirArchivo
+          trabajo={t}
+          archivo={imprimiendo}
+          alCerrar={() => setImprimiendo(null)}
+          // Las hojas que salieron se van sumando para cobrar después.
+          alImprimir={(h) => setHojas((actual) => String(Number(actual || 0) + h))}
+        />
+      )}
 
       {t.estado === "PENDIENTE" ? (
         <div className="fila">

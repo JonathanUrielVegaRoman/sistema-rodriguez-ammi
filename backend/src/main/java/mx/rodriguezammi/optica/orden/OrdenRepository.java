@@ -13,6 +13,8 @@ public interface OrdenRepository extends JpaRepository<OrdenLentes, Long> {
 
     List<OrdenLentes> findByClienteIdOrderByFechaDesc(Long clienteId);
 
+    boolean existsByClienteId(Long clienteId);
+
     List<OrdenLentes> findByFechaBetweenOrderByFechaAsc(LocalDateTime desde, LocalDateTime hasta);
 
     /** Pagos recibidos en un rango de fechas (para el reporte de dinero que entró). */

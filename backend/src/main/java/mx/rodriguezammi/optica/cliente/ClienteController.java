@@ -11,6 +11,8 @@ import java.util.List;
  *   GET  /api/optica/clientes/{id}      uno
  *   POST /api/optica/clientes           crear
  *   PUT  /api/optica/clientes/{id}      editar
+ *   DELETE /api/optica/clientes/{id}    borrar (o archivar si tiene órdenes)
+ *   POST /api/optica/clientes/{id}/restaurar   sacar del archivo
  */
 @RestController
 @RequestMapping("/api/optica/clientes")
@@ -41,5 +43,22 @@ public class ClienteController {
     @PutMapping("/{id}")
     public ClienteDto.Respuesta actualizar(@PathVariable Long id, @Valid @RequestBody ClienteDto.Guardar datos) {
         return servicio.actualizar(id, datos);
+    }
+
+    public record Eliminado(ClienteService.ResultadoEliminar resultado, String mensaje) {
+    }
+
+    /** Borra o archiva (si tiene órdenes). Ver ClienteService.eliminar. */
+    @DeleteMapping("/{id}")
+    public Eliminado eliminar(@PathVariable Long id) {
+        ClienteService.ResultadoEliminar r = servicio.eliminar(id);
+        return new Eliminado(r, r == ClienteService.ResultadoEliminar.ELIMINADO
+                ? "Cliente eliminado"
+                : "El cliente tiene órdenes, así que se archivó: ya no aparece en búsquedas, pero sus ventas se conservan");
+    }
+
+    @PostMapping("/{id}/restaurar")
+    public ClienteDto.Respuesta restaurar(@PathVariable Long id) {
+        return servicio.restaurar(id);
     }
 }

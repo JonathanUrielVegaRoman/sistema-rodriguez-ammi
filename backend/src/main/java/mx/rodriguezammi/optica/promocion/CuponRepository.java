@@ -18,4 +18,6 @@ public interface CuponRepository extends JpaRepository<Cupon, Long> {
     Optional<Cupon> findFirstByClienteIdAndTipoAndCreadoAfterOrderByCreadoDesc(Long clienteId, TipoCupon tipo, LocalDateTime desde);
 
     List<Cupon> findTop100ByOrderByCreadoDesc();
+
+    void deleteByClienteId(Long clienteId);
 }

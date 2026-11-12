@@ -19,6 +19,7 @@ export default function ClienteDetalle({ id }) {
   const [editando, setEditando] = useState(false)
   const [nuevaReceta, setNuevaReceta] = useState(false)
   const [error, setError] = useState("")
+  const [aviso, setAviso] = useState("")
 
   useEffect(() => {
     Promise.all([clientesApi.obtener(id), clientesApi.recetas(id), clientesApi.ordenes(id)])
@@ -29,6 +30,32 @@ export default function ClienteDetalle({ id }) {
       })
       .catch((e) => setError(e.message))
   }, [id])
+
+  async function eliminar() {
+    const texto = ordenes.length > 0 ? `¿Archivar a ${cliente.nombre}?` : `¿Eliminar a ${cliente.nombre} y sus graduaciones? No se puede deshacer.`
+    if (!window.confirm(texto)) return
+    try {
+      const r = await clientesApi.eliminar(cliente.id)
+      if (r.resultado === "ELIMINADO") {
+        ir("/optica/clientes")
+      } else {
+        setCliente({ ...cliente, activo: false })
+        setEditando(false)
+        setAviso(r.mensaje)
+      }
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  async function restaurar() {
+    try {
+      setCliente(await clientesApi.restaurar(cliente.id))
+      setAviso("")
+    } catch (e) {
+      setError(e.message)
+    }
+  }
 
   if (error) return <p className="mensaje-error">{error}</p>
   if (!cliente) return <p className="texto-tenue">Cargando…</p>
@@ -46,9 +73,16 @@ export default function ClienteDetalle({ id }) {
         </div>
         <div className="acciones acciones--sin-margen">
           <button className="btn btn--contorno" onClick={() => setEditando(true)}>Editar</button>
-          <button className="btn btn--verde" onClick={() => ir(`/optica/ordenes/nueva?cliente=${cliente.id}`)}>Nueva orden</button>
+          {cliente.activo && <button className="btn btn--verde" onClick={() => ir(`/optica/ordenes/nueva?cliente=${cliente.id}`)}>Nueva orden</button>}
         </div>
       </div>
+      {!cliente.activo && (
+        <div className="aviso-barra">
+          <span>Cliente archivado: no aparece en búsquedas ni recibe felicitaciones. Sus órdenes se conservan.</span>
+          <button className="btn btn--texto" onClick={restaurar}>Restaurar</button>
+        </div>
+      )}
+      {aviso && <p className="alerta alerta--exito">{aviso}</p>}
       {cliente.notas && <p className="aviso-barra">{cliente.notas}</p>}
 
       <div className="dos-columnas">
@@ -80,6 +114,18 @@ export default function ClienteDetalle({ id }) {
       {editando && (
         <Modal titulo="Editar cliente" alCerrar={() => setEditando(false)}>
           <FormCliente inicial={cliente} alGuardar={(c) => { setCliente(c); setEditando(false) }} />
+          {cliente.activo && (
+            <div className="zona-peligro">
+              <p className="texto-tenue">
+                {ordenes.length > 0
+                  ? "Tiene órdenes: se archivará (deja de aparecer en búsquedas, pero sus ventas se conservan)."
+                  : "No tiene órdenes: se borrará junto con sus graduaciones. No se puede deshacer."}
+              </p>
+              <button className="btn btn--peligro" onClick={eliminar}>
+                {ordenes.length > 0 ? "Archivar cliente" : "Eliminar cliente"}
+              </button>
+            </div>
+          )}
         </Modal>
       )}
       {nuevaReceta && (

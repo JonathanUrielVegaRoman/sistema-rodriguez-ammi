@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react"
 import useRuta, { coincide } from "./hooks/useRuta"
 import { sesion, EVENTO_SIN_ACCESO } from "./services/sesion"
-import { accesoApi } from "./services/api"
+import { accesoApi, cerrarSesionAdmin } from "./services/api"
 import Encabezado from "./components/Encabezado"
 import Acceso from "./vistas/Acceso"
 import Inicio from "./vistas/Inicio"
@@ -78,6 +78,12 @@ export default function App() {
     window.addEventListener(EVENTO_SIN_ACCESO, alPerderAcceso)
     return () => window.removeEventListener(EVENTO_SIN_ACCESO, alPerderAcceso)
   }, [])
+
+  // Administración: en cuanto se sale de las pantallas #/admin (con ←, con el menú o por error),
+  // se cierra la sesión del dueño. Para volver a ver las ventas hay que escribir la contraseña otra vez.
+  useEffect(() => {
+    if (!ruta.startsWith("/admin") && sesion.admin()) cerrarSesionAdmin()
+  }, [ruta])
 
   // Puerta pública: el buzón de impresión para clientes, sin menú del sistema.
   if (ruta === "/imprimir") return <Imprimir />

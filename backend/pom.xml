@@ -66,6 +66,21 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- PDFBOX: lee PDFs para contar páginas, hacer la vista previa e imprimirlos directo
+             en la impresora de la PC (buzón de impresión). -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.5</version>
+        </dependency>
+
+        <!-- APACHE POI: crea archivos de Excel (.xlsx) para el reporte de ventas del administrador. -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.4.1</version>
+        </dependency>
+
         <!-- DEVTOOLS: reinicia el servidor solo cuando guardas cambios (solo en desarrollo). -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -8,4 +8,6 @@ public interface RecetaRepository extends JpaRepository<Receta, Long> {
 
     /** Historial de graduaciones de un cliente, la más reciente primero. */
     List<Receta> findByClienteIdOrderByFechaDesc(Long clienteId);
+
+    void deleteByClienteId(Long clienteId);
 }

@@ -25,13 +25,14 @@
 | Vender | **Vender** | Tocar productos → ajustar cantidades → método de pago → **Cobrar** → **Imprimir ticket** |
 | Dar de alta mercancía | **Inventario → + Producto** | Nombre (el ícono se sugiere solo), precio, existencia y "avisar cuando queden" |
 | Cuando llega mercancía | **Inventario → Resurtir** | Escribir cuántas piezas llegaron |
-| Imprimir archivos de un cliente | **Impresiones** | Abrir cada archivo → imprimir → **Ya lo imprimí** (anotar hojas) → **Cobrar y entregar** |
+| Imprimir archivos de un cliente | **Impresiones** | Tocar el archivo → ver la **vista previa** y elegir opciones (copias, color, papel, orientación, páginas) → **Imprimir** (sale directo en la impresora de la PC, también desde el celular) → las hojas se anotan solas → **Ya lo imprimí** → **Cobrar y entregar**. Word y Excel se abren para imprimirlos con su programa |
 | Poner el QR en el mostrador | **Impresiones → Cartel con QR** | Imprimir y pegar a la vista |
 
 ## Óptica RODRÍGUEZ
 | Para… | Ve a… | Pasos |
 |---|---|---|
 | Cliente nuevo | **Clientes → + Cliente** | Nombre, celular, cumpleaños y **preguntarle** si acepta felicitación por WhatsApp |
+| Borrar un cliente | Ficha → **Editar** → **Eliminar/Archivar** | Sin órdenes se borra; con órdenes se **archiva** (sus ventas se conservan) y se puede restaurar |
 | Capturar graduación | Ficha del cliente → **+ Nueva graduación** | OD = ojo derecho, OI = ojo izquierdo |
 | Armazón nuevo | **Armazones → + Armazón** | Código, medidas de la varilla, precio → **Tomar foto** (fondo blanco, de frente) |
 | Encontrar un armazón | **Armazones** | Buscar por código o tocar la **talla** (ej. 52 mm) para ver solo esa medida |
@@ -43,8 +44,9 @@
 
 ## Solo el dueño (🔒)
 - **Reportes**: hoy, ayer, semana, mes, mes pasado o fechas a elegir. Cuánto entró por negocio y por método de pago, lo más vendido y lo que falta por cobrar en la óptica.
+- **Excel**: botón *Excel del periodo* o *Excel de todo el historial*. Trae cada venta con **fecha y hora**, los pagos de la óptica y las órdenes, listo para filtrar y sumar.
 - **Ajustes**: precios de tratamientos y cuáles entran en el 2x1, cupones de descuento especial, y **cerrar sesión en todos los celulares** si se pierde uno.
-- Al terminar, **Cerrar sesión de administrador** (sobre todo si se usó el celular de alguien más).
+- La sesión de administrador **se cierra sola** en cuanto se sale de Administración (con ←, con el menú o por error) o al cerrar la pestaña. Para volver a ver las ventas se pide la contraseña otra vez.
 
 ---
 

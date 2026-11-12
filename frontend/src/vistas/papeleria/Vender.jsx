@@ -127,18 +127,22 @@ export default function Vender() {
         <div className="panel panel--pegado">
           <h2 className="panel-titulo">Carrito</h2>
           {carrito.length === 0 && <p className="texto-tenue">Toca un producto para agregarlo.</p>}
-          <ul className="lista-simple">
+          {/* Cada renglón es una rejilla de 4 columnas fijas: ícono | nombre | cantidad | importe.
+              Así los botones y los precios quedan alineados aunque los nombres midan distinto. */}
+          <ul className="carrito">
             {carrito.map((r) => (
-              <li key={r.producto.id}>
-                <span>
-                  <span className="emoji-chico">{r.producto.icono ?? EMOJI_GENERICO}</span> {r.producto.nombre}
+              <li key={r.producto.id} className="carrito-renglon">
+                <span className="carrito-emoji" aria-hidden="true">{r.producto.icono ?? EMOJI_GENERICO}</span>
+                <span className="carrito-nombre">
+                  {r.producto.nombre}
+                  <small className="texto-tenue cifra">{dinero(r.producto.precio)} c/u</small>
                 </span>
                 <span className="cantidad">
                   <button className="btn btn--contorno btn--mini" onClick={() => cambiarCantidad(r.producto.id, r.cantidad - 1)} aria-label="Quitar uno">−</button>
-                  <span className="cifra">{r.cantidad}</span>
+                  <span className="cifra cantidad-numero">{r.cantidad}</span>
                   <button className="btn btn--contorno btn--mini" onClick={() => cambiarCantidad(r.producto.id, r.cantidad + 1)} aria-label="Agregar uno">+</button>
                 </span>
-                <span className="cifra">{dinero(r.producto.precio * r.cantidad)}</span>
+                <span className="cifra carrito-importe">{dinero(r.producto.precio * r.cantidad)}</span>
               </li>
             ))}
           </ul>

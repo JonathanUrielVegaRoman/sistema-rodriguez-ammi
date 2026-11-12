@@ -56,15 +56,18 @@ public class ImpresionService {
     private final AlmacenArchivos archivos;
     private final ProductoRepository productos;
     private final VentaService ventas;
+    private final ImpresoraService impresora;
     private final int horasRetencion;
     private final SecureRandom aleatorio = new SecureRandom();
 
     public ImpresionService(TrabajoImpresionRepository trabajos, AlmacenArchivos archivos, ProductoRepository productos,
-                            VentaService ventas, @Value("${app.impresiones.horas-retencion:24}") int horasRetencion) {
+                            VentaService ventas, ImpresoraService impresora,
+                            @Value("${app.impresiones.horas-retencion:24}") int horasRetencion) {
         this.trabajos = trabajos;
         this.archivos = archivos;
         this.productos = productos;
         this.ventas = ventas;
+        this.impresora = impresora;
         this.horasRetencion = horasRetencion;
     }
 
@@ -76,7 +79,11 @@ public class ImpresionService {
     public record EstadoPublico(String turno, EstadoImpresion estado, LocalDateTime fecha, int archivos) {
     }
 
-    public record ArchivoDto(Long id, String nombre, long tamano, boolean disponible) {
+    /** imprimible = PDF o imagen: se puede imprimir directo desde el sistema (ver ImpresoraService). */
+    public record ArchivoDto(Long id, String nombre, long tamano, boolean disponible, boolean imprimible) {
+    }
+
+    public record InfoArchivo(String nombre, int paginas, boolean imprimible) {
     }
 
     public record TrabajoDto(Long id, String turno, LocalDateTime fecha, int copias, boolean color, boolean dobleCara,
@@ -85,7 +92,7 @@ public class ImpresionService {
             return new TrabajoDto(t.getId(), t.getTurno(), t.getFecha(), t.getCopias(), t.isColor(), t.isDobleCara(),
                     t.getNotas(), t.getEstado(), t.getHojas(), t.getVentaFolio(),
                     t.getArchivos().stream().map(a -> new ArchivoDto(a.getId(), a.getNombreOriginal(), a.getTamano(),
-                            a.getNombreGuardado() != null)).toList());
+                            a.getNombreGuardado() != null, ImpresoraService.imprimible(a.getNombreOriginal()))).toList());
         }
     }
 
@@ -141,6 +148,34 @@ public class ImpresionService {
             throw new RecursoNoEncontradoException("El archivo ya se borró por privacidad");
         }
         return new Descarga(archivos.ruta(CARPETA, a.getNombreGuardado()), a.getNombreOriginal());
+    }
+
+    // ---------------- Impresión directa (vista previa y opciones) ----------------
+
+    public InfoArchivo info(Long trabajoId, Long archivoId) {
+        Descarga d = archivo(trabajoId, archivoId);
+        boolean imprimible = ImpresoraService.imprimible(d.nombre());
+        return new InfoArchivo(d.nombre(), imprimible ? impresora.paginas(d.ruta()) : 0, imprimible);
+    }
+
+    public byte[] vistaPrevia(Long trabajoId, Long archivoId, int pagina, boolean color) {
+        Descarga d = archivo(trabajoId, archivoId);
+        exigirImprimible(d);
+        return impresora.vistaPrevia(d.ruta(), pagina, color, 700);
+    }
+
+    public ImpresoraService.Resultado imprimirArchivo(Long trabajoId, Long archivoId, ImpresoraService.Opciones opciones) {
+        TrabajoImpresion t = buscar(trabajoId);
+        exigirAbierto(t);
+        Descarga d = archivo(trabajoId, archivoId);
+        exigirImprimible(d);
+        return impresora.imprimir(d.ruta(), "AMMI " + t.getTurno() + " - " + d.nombre(), opciones);
+    }
+
+    private void exigirImprimible(Descarga d) {
+        if (!ImpresoraService.imprimible(d.nombre())) {
+            throw new ReglaDeNegocioException("Este tipo de archivo (Word, Excel...) se imprime abriéndolo en su programa");
+        }
     }
 
     @Transactional

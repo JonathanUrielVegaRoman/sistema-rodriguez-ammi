@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { reportesApi } from "../../services/api"
 import { dinero, fechaCorta, iso, NOMBRES_PAGO } from "../../utils/formato"
 import PuertaAdmin from "../../components/PuertaAdmin"
+import Icono from "../../components/Icono"
 
 /*
   REPORTES PRIVADOS (solo el dueño): cuánto entró por día, semana o mes, en cada negocio.
@@ -58,6 +59,20 @@ function ContenidoReportes() {
     reportesApi.generar(desde, hasta).then(setReporte).catch((e) => setError(e.message))
   }, [desde, hasta])
 
+  const [descargando, setDescargando] = useState(false)
+
+  async function descargarExcel(d, h) {
+    setError("")
+    setDescargando(true)
+    try {
+      await reportesApi.excel(d, h)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setDescargando(false)
+    }
+  }
+
   function elegir(c) {
     setClave(c)
     setRango(periodo(c))
@@ -79,6 +94,16 @@ function ContenidoReportes() {
           <span className="texto-tenue">a</span>
           <input className="entrada" type="date" value={hasta} min={desde} onChange={(e) => { setClave(""); setRango([desde, e.target.value]) }} aria-label="Hasta" />
         </div>
+      </div>
+
+      {/* Excel: el mismo periodo elegido arriba, o todo el historial desde la primera venta. */}
+      <div className="acciones acciones--sin-margen acciones--excel">
+        <button className="btn btn--verde" onClick={() => descargarExcel(desde, hasta)} disabled={descargando}>
+          <Icono nombre="documento" /> {descargando ? "Generando…" : "Excel del periodo"}
+        </button>
+        <button className="btn btn--contorno" onClick={() => descargarExcel()} disabled={descargando}>
+          Excel de todo el historial
+        </button>
       </div>
 
       {error && <p className="mensaje-error">{error}</p>}

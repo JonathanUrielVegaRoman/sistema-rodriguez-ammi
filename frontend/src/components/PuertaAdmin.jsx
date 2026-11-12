@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react"
-import { accesoApi } from "../services/api"
+import { accesoApi, cerrarSesionAdmin } from "../services/api"
 import { sesion, EVENTO_SIN_ACCESO } from "../services/sesion"
 import Icono from "./Icono"
 
 /*
   PUERTA DEL ADMINISTRADOR: envuelve las pantallas privadas (reportes, ajustes).
   Si este dispositivo no tiene pase de administrador vigente, pide la contraseña del dueño.
-  El pase dura unas horas; "Cerrar sesión de administrador" lo quita al momento
-  (útil si el dueño revisó los reportes en el celular de alguien más).
+  La sesión se cierra sola en cuanto se sale de Administración (ver App.jsx), al cerrar la
+  pestaña, o con el botón "Cerrar sesión de administrador".
 
   Uso:  <PuertaAdmin> ...pantalla privada... </PuertaAdmin>
 */
@@ -36,8 +36,7 @@ export default function PuertaAdmin({ children }) {
   }
 
   async function salir() {
-    await accesoApi.salirAdmin().catch(() => {})
-    sesion.olvidarAdmin()
+    await cerrarSesionAdmin()
     setDentro(false)
   }
 
