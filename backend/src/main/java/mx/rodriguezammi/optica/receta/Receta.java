@@ -20,7 +20,7 @@ import java.time.LocalDate;
  *
  * Se usa BigDecimal porque las graduaciones van de 0.25 en 0.25 y no queremos redondeos raros.
  *
- * ESTADO: solo Entity + Repository (ver optica/EJERCICIOS.md).
+ * Se captura desde la ficha del cliente (RecetaController, rutas anidadas).
  */
 @Entity
 @Table(name = "recetas")

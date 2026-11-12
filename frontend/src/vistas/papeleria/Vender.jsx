@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react"
 import { productosApi, ventasApi } from "../../services/api"
 import { dinero, NOMBRES_PAGO } from "../../utils/formato"
+import { EMOJI_GENERICO } from "../../utils/emojis"
 import Ticket from "../../components/Ticket"
 
 /*
   PUNTO DE VENTA de la papelería.
 
   Flujo:
-    1. Buscar producto (por nombre o escaneando el código de barras) → se agrega al carrito.
+    1. Tocar un producto en la cuadrícula (o buscarlo / escanear su código) → se agrega al carrito.
     2. Ajustar cantidades.
     3. Elegir método de pago (y con cuánto paga, si es efectivo).
     4. Cobrar → el backend descuenta inventario y devuelve el TICKET → imprimir.
@@ -24,15 +25,15 @@ export default function Vender() {
   const [ticket, setTicket] = useState(null)
   const [cobrando, setCobrando] = useState(false)
 
-  // Cargamos el catálogo una vez; filtramos en el navegador (son pocos productos).
+  // Cargamos el catálogo; se recarga después de cada venta para ver existencias al día.
   useEffect(() => {
     productosApi.listar().then(setProductos).catch((e) => setError(e.message))
-  }, [ticket]) // ...y lo recargamos después de cada venta para ver existencias al día.
+  }, [ticket])
 
   const texto = busqueda.trim().toLowerCase()
-  const resultados = texto
+  const visibles = texto
     ? productos.filter((p) => p.nombre.toLowerCase().includes(texto) || p.codigoBarras === busqueda.trim())
-    : []
+    : productos
 
   const total = carrito.reduce((suma, r) => suma + r.producto.precio * r.cantidad, 0)
   const cambio = pagaCon ? Number(pagaCon) - total : 0
@@ -56,7 +57,7 @@ export default function Vender() {
 
   // Con lector de código de barras: el lector "teclea" el código y presiona Enter.
   function alPresionarTecla(e) {
-    if (e.key === "Enter" && resultados.length === 1) agregar(resultados[0])
+    if (e.key === "Enter" && texto && visibles.length === 1) agregar(visibles[0])
   }
 
   async function cobrar() {
@@ -78,19 +79,14 @@ export default function Vender() {
     }
   }
 
-  // Después de cobrar, mostramos el ticket en lugar del punto de venta.
   if (ticket) {
     return (
       <section className="angosto">
         <p className="alerta alerta--exito">Venta registrada</p>
         <Ticket ticket={ticket} />
         <div className="acciones">
-          <button className="btn btn--primario" onClick={() => window.print()}>
-            Imprimir ticket
-          </button>
-          <button className="btn btn--contorno" onClick={() => setTicket(null)}>
-            Nueva venta
-          </button>
+          <button className="btn btn--primario" onClick={() => window.print()}>Imprimir ticket</button>
+          <button className="btn btn--contorno" onClick={() => setTicket(null)}>Nueva venta</button>
         </div>
       </section>
     )
@@ -98,51 +94,49 @@ export default function Vender() {
 
   return (
     <section>
-      <h1 className="nombre-pagina">Vender</h1>
-      <p className="descripcion-pagina">Papelería AMMI</p>
-
-      <div className="dos-columnas">
+      <div className="dos-columnas dos-columnas--venta">
         <div className="panel">
-          <label className="campo">
-            <span className="etiqueta">Buscar producto o escanear código</span>
-            <input
-              className="entrada"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              onKeyDown={alPresionarTecla}
-              placeholder="Ej. cuaderno"
-              autoFocus
-            />
-          </label>
-          <ul className="lista-simple lista-simple--clic">
-            {resultados.map((p) => (
-              <li key={p.id}>
-                <button onClick={() => agregar(p)} disabled={p.existencia <= 0}>
-                  <span>{p.nombre}</span>
-                  <span className="cifra">{dinero(p.precio)}</span>
-                  <span className="texto-tenue cifra">hay {p.existencia}</span>
+          <input
+            className="entrada"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            onKeyDown={alPresionarTecla}
+            placeholder="Buscar o escanear código…"
+            aria-label="Buscar producto"
+          />
+          <div className="mosaico">
+            {visibles.map((p) => {
+              const agotado = !p.servicio && p.existencia <= 0
+              return (
+                <button key={p.id} className="mosaico-pieza" onClick={() => agregar(p)} disabled={agotado}>
+                  <span className="mosaico-emoji">{p.icono ?? EMOJI_GENERICO}</span>
+                  <span className="mosaico-nombre">{p.nombre}</span>
+                  <span className="mosaico-precio cifra">{dinero(p.precio)}</span>
+                  {!p.servicio && (
+                    <span className={"mosaico-existencia cifra" + (p.necesitaResurtir ? " mosaico-existencia--baja" : "")}>
+                      {agotado ? "agotado" : `hay ${p.existencia}`}
+                    </span>
+                  )}
                 </button>
-              </li>
-            ))}
-          </ul>
-          {texto && resultados.length === 0 && <p className="texto-tenue">Sin resultados</p>}
+              )
+            })}
+          </div>
+          {texto && visibles.length === 0 && <p className="texto-tenue">Sin resultados</p>}
         </div>
 
-        <div className="panel">
+        <div className="panel panel--pegado">
           <h2 className="panel-titulo">Carrito</h2>
-          {carrito.length === 0 && <p className="texto-tenue">Agrega productos desde la búsqueda.</p>}
+          {carrito.length === 0 && <p className="texto-tenue">Toca un producto para agregarlo.</p>}
           <ul className="lista-simple">
             {carrito.map((r) => (
               <li key={r.producto.id}>
-                <span>{r.producto.nombre}</span>
+                <span>
+                  <span className="emoji-chico">{r.producto.icono ?? EMOJI_GENERICO}</span> {r.producto.nombre}
+                </span>
                 <span className="cantidad">
-                  <button className="btn btn--contorno btn--mini" onClick={() => cambiarCantidad(r.producto.id, r.cantidad - 1)} aria-label="Quitar uno">
-                    −
-                  </button>
+                  <button className="btn btn--contorno btn--mini" onClick={() => cambiarCantidad(r.producto.id, r.cantidad - 1)} aria-label="Quitar uno">−</button>
                   <span className="cifra">{r.cantidad}</span>
-                  <button className="btn btn--contorno btn--mini" onClick={() => cambiarCantidad(r.producto.id, r.cantidad + 1)} aria-label="Agregar uno">
-                    +
-                  </button>
+                  <button className="btn btn--contorno btn--mini" onClick={() => cambiarCantidad(r.producto.id, r.cantidad + 1)} aria-label="Agregar uno">+</button>
                 </span>
                 <span className="cifra">{dinero(r.producto.precio * r.cantidad)}</span>
               </li>
@@ -154,16 +148,13 @@ export default function Vender() {
           </p>
 
           <div className="formulario">
-            <label className="campo">
-              <span className="etiqueta">Método de pago</span>
-              <select className="entrada" value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
-                {Object.entries(NOMBRES_PAGO).map(([valor, nombre]) => (
-                  <option key={valor} value={valor}>
-                    {nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="segmentado">
+              {Object.entries(NOMBRES_PAGO).map(([valor, nombre]) => (
+                <button key={valor} type="button" className={metodoPago === valor ? "activo" : ""} onClick={() => setMetodoPago(valor)}>
+                  {nombre}
+                </button>
+              ))}
+            </div>
             {metodoPago === "EFECTIVO" && (
               <label className="campo">
                 <span className="etiqueta">Paga con (opcional)</span>

@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
  * hay que avisarle al cliente para qué se usan (aviso de privacidad) y pedir su permiso
  * para mandarle promociones; por eso existe el campo "aceptaPromociones".
  *
- * ESTADO: solo Entity + Repository. El Service, el Controller y los DTO quedan como
- * EJERCICIO (ver optica/EJERCICIOS.md), siguiendo el ejemplo de papeleria/producto.
+ * Módulo completo: ClienteDto, ClienteService y ClienteController siguen el mismo
+ * patrón que papeleria/producto (compáralos lado a lado para aprender).
  */
 @Entity
 @Table(name = "clientes")

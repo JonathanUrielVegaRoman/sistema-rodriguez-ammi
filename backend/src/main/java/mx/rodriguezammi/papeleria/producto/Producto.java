@@ -64,6 +64,21 @@ public class Producto {
     @Column(nullable = false)
     private boolean activo = true;
 
+    /**
+     * Ícono del producto: un EMOJI (📓 ✏️ 🖨️...). Se eligió emoji en vez de foto porque
+     * no hay que tomar ni cargar imágenes: viene incluido en todos los celulares y pesa casi nada.
+     */
+    @Column(length = 16)
+    private String icono;
+
+    /**
+     * SERVICIO = no es mercancía física (impresión, copia, engargolado). No lleva inventario:
+     * se puede vender siempre y nunca aparece en "por resurtir".
+     * columnDefinition con "default false" permite agregar la columna aunque la tabla ya tenga datos.
+     */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean servicio;
+
     /** JPA necesita un constructor vacío para poder crear objetos al leer de la base de datos. */
     protected Producto() {
     }
@@ -80,12 +95,19 @@ public class Producto {
 
     /** ¿Ya hay que resurtir? */
     public boolean necesitaResurtir() {
-        return existencia <= stockMinimo;
+        return !servicio && existencia <= stockMinimo;
     }
 
-    /** Resta piezas al vender. El Service revisa antes que alcance. */
+    /** ¿Alcanza para vender esta cantidad? Los servicios siempre alcanzan. */
+    public boolean alcanzaPara(int cantidad) {
+        return servicio || existencia >= cantidad;
+    }
+
+    /** Resta piezas al vender. El Service revisa antes que alcance. Los servicios no se descuentan. */
     public void descontarExistencia(int cantidad) {
-        this.existencia -= cantidad;
+        if (!servicio) {
+            this.existencia -= cantidad;
+        }
     }
 
     // ---------- Getters y setters (para leer y modificar los campos) ----------
@@ -109,4 +131,10 @@ public class Producto {
 
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
+
+    public String getIcono() { return icono; }
+    public void setIcono(String icono) { this.icono = icono; }
+
+    public boolean isServicio() { return servicio; }
+    public void setServicio(boolean servicio) { this.servicio = servicio; }
 }

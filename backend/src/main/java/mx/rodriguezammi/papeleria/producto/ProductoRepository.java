@@ -44,6 +44,6 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
 
     Optional<Producto> findByCodigoBarras(String codigoBarras);
 
-    @Query("SELECT p FROM Producto p WHERE p.activo = true AND p.existencia <= p.stockMinimo ORDER BY p.existencia ASC")
+    @Query("SELECT p FROM Producto p WHERE p.activo = true AND p.servicio = false AND p.existencia <= p.stockMinimo ORDER BY p.existencia ASC")
     List<Producto> buscarPorResurtir();
 }

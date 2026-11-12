@@ -42,7 +42,7 @@ class VentaServiceTest {
     @Test
     void venderDescuentaExistenciaYCalculaTotalYCambio() {
         // Dado
-        var cuaderno = productos.crear(new ProductoDto.Guardar("Cuaderno prueba", null, new BigDecimal("45.00"), 10, 2));
+        var cuaderno = productos.crear(new ProductoDto.Guardar("Cuaderno prueba", null, new BigDecimal("45.00"), 10, 2, null, false));
 
         // Cuando
         var ticket = ventas.registrar(new VentaDto.Nueva(MetodoPago.EFECTIVO, new BigDecimal("100"),
@@ -56,7 +56,7 @@ class VentaServiceTest {
 
     @Test
     void noPermiteVenderMasDeLoQueHay() {
-        var lapiz = productos.crear(new ProductoDto.Guardar("Lápiz prueba", null, new BigDecimal("6.00"), 1, 0));
+        var lapiz = productos.crear(new ProductoDto.Guardar("Lápiz prueba", null, new BigDecimal("6.00"), 1, 0, null, false));
 
         assertThatThrownBy(() -> ventas.registrar(new VentaDto.Nueva(MetodoPago.TARJETA, null,
                 List.of(new VentaDto.Renglon(lapiz.id(), 5)))))
@@ -66,7 +66,7 @@ class VentaServiceTest {
 
     @Test
     void elCorteSumaLasVentasDelDia() {
-        var pluma = productos.crear(new ProductoDto.Guardar("Pluma prueba", null, new BigDecimal("10.00"), 50, 5));
+        var pluma = productos.crear(new ProductoDto.Guardar("Pluma prueba", null, new BigDecimal("10.00"), 50, 5, null, false));
         ventas.registrar(new VentaDto.Nueva(MetodoPago.EFECTIVO, null, List.of(new VentaDto.Renglon(pluma.id(), 3))));
         ventas.registrar(new VentaDto.Nueva(MetodoPago.TARJETA, null, List.of(new VentaDto.Renglon(pluma.id(), 1))));
 

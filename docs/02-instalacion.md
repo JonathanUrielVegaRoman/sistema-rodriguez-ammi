@@ -51,6 +51,15 @@ Viene con productos de ejemplo. Al apagarlo se borra todo; es solo para practica
    $env:DB_PASSWORD="tu_contraseña"; .\mvnw.cmd spring-boot:run
    ```
    Las tablas se crean solas la primera vez.
+3. Definir el **PIN del personal** y la **contraseña del dueño** de la misma forma
+   (si no, se usan los de ejemplo `1234` y `admin123`):
+   ```bash
+   export APP_PIN="un PIN de 4 a 6 números"
+   export APP_ADMIN_PASSWORD="una contraseña larga"
+   ```
+   En la PC del negocio conviene guardarlas como variables de entorno de Windows
+   (Configuración → Sistema → Acerca de → Configuración avanzada → Variables de entorno),
+   para no escribirlas cada vez.
 
 ## 5. Frontend
 ```bash

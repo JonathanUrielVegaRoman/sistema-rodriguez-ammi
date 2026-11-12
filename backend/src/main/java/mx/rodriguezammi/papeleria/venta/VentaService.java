@@ -45,7 +45,7 @@ public class VentaService {
             if (!producto.isActivo()) {
                 throw new ReglaDeNegocioException(producto.getNombre() + " ya no está a la venta");
             }
-            if (producto.getExistencia() < renglon.cantidad()) {
+            if (!producto.alcanzaPara(renglon.cantidad())) {
                 throw new ReglaDeNegocioException("No hay suficiente existencia de " + producto.getNombre()
                         + " (quedan " + producto.getExistencia() + ")");
             }
@@ -70,8 +70,17 @@ public class VentaService {
 
     /** Corte del día: cuánto se vendió en total y por método de pago. */
     public VentaDto.CorteDelDia corte(LocalDate dia) {
+        return corte(dia, dia);
+    }
+
+    /**
+     * Corte de un RANGO de días (semana, mes...). Solo lo ve el administrador
+     * (ver admin/ReporteController). desde y hasta se incluyen completos.
+     */
+    public VentaDto.CorteDelDia corte(LocalDate desde, LocalDate hasta) {
+        LocalDate dia = desde;
         List<Venta> delDia = ventas.findByFechaBetweenOrderByFechaAsc(
-                dia.atStartOfDay(), dia.plusDays(1).atStartOfDay().minusNanos(1));
+                desde.atStartOfDay(), hasta.plusDays(1).atStartOfDay().minusNanos(1));
 
         BigDecimal total = BigDecimal.ZERO;
         Map<MetodoPago, BigDecimal> porMetodo = new EnumMap<>(MetodoPago.class);

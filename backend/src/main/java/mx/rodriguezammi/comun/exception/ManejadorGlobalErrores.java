@@ -1,5 +1,6 @@
 package mx.rodriguezammi.comun.exception;
 
+import mx.rodriguezammi.comun.acceso.AccesoDenegadoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.List;
 
@@ -52,6 +54,18 @@ public class ManejadorGlobalErrores {
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .toList();
         return responder(HttpStatus.BAD_REQUEST, "Revisa los datos capturados", detalles);
+    }
+
+    /** Falta el PIN/contraseña o es incorrecto. 401 = "no sé quién eres". */
+    @ExceptionHandler(AccesoDenegadoException.class)
+    public ResponseEntity<ErrorRespuesta> accesoDenegado(AccesoDenegadoException ex) {
+        return responder(HttpStatus.UNAUTHORIZED, ex.getMessage(), List.of());
+    }
+
+    /** Archivo demasiado grande (foto de armazón o archivo del buzón de impresión). */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorRespuesta> archivoGrande(MaxUploadSizeExceededException ex) {
+        return responder(HttpStatus.PAYLOAD_TOO_LARGE, "El archivo es demasiado grande", List.of());
     }
 
     /** El cuerpo de la petición no es JSON válido (por ejemplo, texto en un campo numérico). */

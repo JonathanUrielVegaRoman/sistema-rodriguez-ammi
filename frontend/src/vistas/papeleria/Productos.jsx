@@ -1,21 +1,24 @@
 import { useEffect, useState } from "react"
 import { productosApi } from "../../services/api"
 import { dinero } from "../../utils/formato"
+import { EMOJI_GENERICO, sugerirEmoji } from "../../utils/emojis"
+import SelectorEmoji from "../../components/SelectorEmoji"
+import Modal from "../../components/Modal"
 
 /*
-  INVENTARIO de la papelería: lista, alta, edición y resurtido.
+  INVENTARIO de la papelería: lista con ícono, alta, edición y resurtido.
 
   Patrón muy común en React:
     - "productos" guarda lo que vino del backend.
     - "formulario" guarda lo que el usuario está escribiendo.
-    - "editando" dice si el formulario es para crear (null) o para editar (id).
+    - "editando": null = cerrado, "nuevo" = alta, número = id del producto que se edita.
 */
-const VACIO = { nombre: "", codigoBarras: "", precio: "", existencia: 0, stockMinimo: 0 }
+const VACIO = { nombre: "", codigoBarras: "", precio: "", existencia: 0, stockMinimo: 0, icono: "", servicio: false }
 
-export default function Productos() {
+export default function Productos({ consulta }) {
   const [productos, setProductos] = useState([])
   const [busqueda, setBusqueda] = useState("")
-  const [soloResurtir, setSoloResurtir] = useState(false)
+  const [soloResurtir, setSoloResurtir] = useState(consulta?.resurtir === "1")
   const [formulario, setFormulario] = useState(VACIO)
   const [editando, setEditando] = useState(null)
   const [error, setError] = useState("")
@@ -26,35 +29,49 @@ export default function Productos() {
 
   useEffect(cargar, [])
 
-  // Un solo manejador para todos los campos: usa el atributo "name" del input.
   function cambiarCampo(e) {
-    setFormulario({ ...formulario, [e.target.name]: e.target.value })
+    const { name, value, type, checked } = e.target
+    const nuevo = { ...formulario, [name]: type === "checkbox" ? checked : value }
+    // Si aún no eligió ícono, sugerimos uno según el nombre ("cuaderno" → 📓).
+    if (name === "nombre" && !formulario.iconoElegido) nuevo.icono = sugerirEmoji(value) ?? ""
+    setFormulario(nuevo)
+  }
+
+  function abrirNuevo() {
+    setError("")
+    setFormulario(VACIO)
+    setEditando("nuevo")
+  }
+
+  function editar(p) {
+    setError("")
+    setEditando(p.id)
+    setFormulario({
+      nombre: p.nombre, codigoBarras: p.codigoBarras ?? "", precio: p.precio, existencia: p.existencia,
+      stockMinimo: p.stockMinimo, icono: p.icono ?? "", servicio: p.servicio, iconoElegido: true,
+    })
   }
 
   async function guardar(e) {
     e.preventDefault() // evita que el navegador recargue la página al enviar el formulario
     setError("")
     const datos = {
-      ...formulario,
+      nombre: formulario.nombre,
+      codigoBarras: formulario.codigoBarras,
       precio: Number(formulario.precio),
       existencia: Number(formulario.existencia),
       stockMinimo: Number(formulario.stockMinimo),
+      icono: formulario.icono || null,
+      servicio: formulario.servicio,
     }
     try {
-      if (editando) await productosApi.actualizar(editando, datos)
-      else await productosApi.crear(datos)
-      setFormulario(VACIO)
+      if (editando === "nuevo") await productosApi.crear(datos)
+      else await productosApi.actualizar(editando, datos)
       setEditando(null)
       cargar()
     } catch (err) {
       setError(err.message)
     }
-  }
-
-  function editar(p) {
-    setEditando(p.id)
-    setFormulario({ nombre: p.nombre, codigoBarras: p.codigoBarras ?? "", precio: p.precio, existencia: p.existencia, stockMinimo: p.stockMinimo })
-    window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   async function resurtir(p) {
@@ -75,45 +92,10 @@ export default function Productos() {
 
   return (
     <section>
-      <h1 className="nombre-pagina">Inventario</h1>
-      <p className="descripcion-pagina">Papelería AMMI</p>
-
-      <form className="panel formulario" onSubmit={guardar}>
-        <h2 className="panel-titulo">{editando ? "Editar producto" : "Nuevo producto"}</h2>
-        <div className="rejilla">
-          <label className="campo campo--ancho">
-            <span className="etiqueta">Nombre</span>
-            <input className="entrada" name="nombre" value={formulario.nombre} onChange={cambiarCampo} required />
-          </label>
-          <label className="campo">
-            <span className="etiqueta">Código de barras (opcional)</span>
-            <input className="entrada" name="codigoBarras" value={formulario.codigoBarras} onChange={cambiarCampo} />
-          </label>
-          <label className="campo">
-            <span className="etiqueta">Precio</span>
-            <input className="entrada" name="precio" type="number" min="0" step="0.5" inputMode="decimal" value={formulario.precio} onChange={cambiarCampo} required />
-          </label>
-          <label className="campo">
-            <span className="etiqueta">Existencia</span>
-            <input className="entrada" name="existencia" type="number" min="0" inputMode="numeric" value={formulario.existencia} onChange={cambiarCampo} />
-          </label>
-          <label className="campo">
-            <span className="etiqueta">Avisar cuando queden</span>
-            <input className="entrada" name="stockMinimo" type="number" min="0" inputMode="numeric" value={formulario.stockMinimo} onChange={cambiarCampo} />
-          </label>
-        </div>
-        {error && <p className="mensaje-error">{error}</p>}
-        <div className="acciones">
-          <button className="btn btn--primario" type="submit">
-            {editando ? "Guardar cambios" : "Agregar producto"}
-          </button>
-          {editando && (
-            <button className="btn btn--contorno" type="button" onClick={() => { setEditando(null); setFormulario(VACIO) }}>
-              Cancelar
-            </button>
-          )}
-        </div>
-      </form>
+      <div className="titulo-con-accion">
+        <h1 className="titulo-seccion">Inventario</h1>
+        <button className="btn btn--primario" onClick={abrirNuevo}>+ Producto</button>
+      </div>
 
       <div className="panel">
         <div className="filtros">
@@ -123,19 +105,24 @@ export default function Productos() {
             Solo por resurtir
           </label>
         </div>
+        {error && !editando && <p className="mensaje-error">{error}</p>}
 
         <ul className="lista-productos">
           {visibles.map((p) => (
             <li key={p.id} className="producto">
-              <div>
+              <span className="producto-emoji" aria-hidden="true">{p.icono ?? EMOJI_GENERICO}</span>
+              <div className="producto-datos">
                 <strong>{p.nombre}</strong>
                 <div className="texto-tenue cifra">
-                  {dinero(p.precio)} · aviso en {p.stockMinimo}
+                  {dinero(p.precio)}
+                  {p.servicio ? " · servicio (sin inventario)" : ` · aviso en ${p.stockMinimo}`}
                 </div>
               </div>
-              <span className={"insignia cifra " + (p.necesitaResurtir ? "insignia--ambar" : "insignia--verde")}>{p.existencia} pzas</span>
+              {!p.servicio && (
+                <span className={"insignia cifra " + (p.necesitaResurtir ? "insignia--ambar" : "insignia--verde")}>{p.existencia} pzas</span>
+              )}
               <div className="producto-acciones">
-                <button className="btn btn--texto" onClick={() => resurtir(p)}>Resurtir</button>
+                {!p.servicio && <button className="btn btn--texto" onClick={() => resurtir(p)}>Resurtir</button>}
                 <button className="btn btn--texto" onClick={() => editar(p)}>Editar</button>
               </div>
             </li>
@@ -143,6 +130,50 @@ export default function Productos() {
         </ul>
         {visibles.length === 0 && <p className="texto-tenue texto-centro">No hay productos que mostrar.</p>}
       </div>
+
+      {editando && (
+        <Modal titulo={editando === "nuevo" ? "Nuevo producto" : "Editar producto"} alCerrar={() => setEditando(null)}>
+          <form className="formulario" onSubmit={guardar}>
+            <div className="campo-con-emoji">
+              <SelectorEmoji valor={formulario.icono} alCambiar={(icono) => setFormulario({ ...formulario, icono, iconoElegido: true })} />
+              <label className="campo">
+                <span className="etiqueta">Nombre</span>
+                <input className="entrada" name="nombre" value={formulario.nombre} onChange={cambiarCampo} required autoFocus />
+              </label>
+            </div>
+            <div className="rejilla">
+              <label className="campo">
+                <span className="etiqueta">Precio</span>
+                <input className="entrada" name="precio" type="number" min="0" step="0.5" inputMode="decimal" value={formulario.precio} onChange={cambiarCampo} required />
+              </label>
+              <label className="campo">
+                <span className="etiqueta">Código de barras (opcional)</span>
+                <input className="entrada" name="codigoBarras" value={formulario.codigoBarras} onChange={cambiarCampo} />
+              </label>
+              {!formulario.servicio && (
+                <>
+                  <label className="campo">
+                    <span className="etiqueta">Existencia</span>
+                    <input className="entrada" name="existencia" type="number" min="0" inputMode="numeric" value={formulario.existencia} onChange={cambiarCampo} />
+                  </label>
+                  <label className="campo">
+                    <span className="etiqueta">Avisar cuando queden</span>
+                    <input className="entrada" name="stockMinimo" type="number" min="0" inputMode="numeric" value={formulario.stockMinimo} onChange={cambiarCampo} />
+                  </label>
+                </>
+              )}
+            </div>
+            <label className="casilla">
+              <input type="checkbox" name="servicio" checked={formulario.servicio} onChange={cambiarCampo} />
+              Es un servicio (copias, engargolado…): no lleva inventario
+            </label>
+            {error && <p className="mensaje-error">{error}</p>}
+            <button className="btn btn--primario btn--bloque" type="submit">
+              {editando === "nuevo" ? "Agregar producto" : "Guardar cambios"}
+            </button>
+          </form>
+        </Modal>
+      )}
     </section>
   )
 }

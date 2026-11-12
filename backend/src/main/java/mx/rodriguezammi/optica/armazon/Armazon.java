@@ -16,7 +16,7 @@ import java.math.BigDecimal;
  * La FOTO no se guarda dentro de la base de datos (la haría pesada y lenta);
  * se guarda como archivo en una carpeta y aquí solo anotamos su nombre (fotoArchivo).
  *
- * ESTADO: solo Entity + Repository (ver optica/EJERCICIOS.md).
+ * Se muestra en CUADRÍCULA con foto (ver frontend/src/vistas/optica/Armazones.jsx).
  */
 @Entity
 @Table(name = "armazones")
@@ -54,6 +54,10 @@ public class Armazon {
 
     @Column(name = "foto_archivo", length = 200)
     private String fotoArchivo;
+
+    /** Dónde está físicamente: "Vitrina 2, charola de arriba". Junto con la foto, ayuda a encontrarlo rápido. */
+    @Column(length = 80)
+    private String ubicacion;
 
     @Column(nullable = false)
     private boolean activo = true;
@@ -97,6 +101,8 @@ public class Armazon {
     public void setExistencia(int existencia) { this.existencia = existencia; }
     public String getFotoArchivo() { return fotoArchivo; }
     public void setFotoArchivo(String fotoArchivo) { this.fotoArchivo = fotoArchivo; }
+    public String getUbicacion() { return ubicacion; }
+    public void setUbicacion(String ubicacion) { this.ubicacion = ubicacion; }
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
 }

@@ -1,45 +1,36 @@
-# Óptica RODRÍGUEZ — ejercicios para completar
+# Óptica RODRÍGUEZ — ejercicios para aprender
 
-La papelería ya está completa y sirve de **molde**. La óptica tiene las tablas
-(Entities) y los Repositories; falta lo demás. Cada ejercicio se hace copiando el
-patrón de `papeleria/producto/` y adaptándolo.
+La óptica ya está completa (clientes, graduaciones, armazones con foto, órdenes, promociones).
+Estos ejercicios son **cambios pequeños y reales** para practicar el patrón
+Entity → Repository → DTO → Service → Controller → pantalla, sin miedo a romper nada.
 
-> Tip: pídele a la IA *"Siguiendo exactamente el patrón de ProductoDto, ProductoService y
-> ProductoController, crea ClienteDto, ClienteService y ClienteController para la entidad
-> Cliente"*. Luego **lee** lo que generó y compáralo con Producto, línea por línea.
+> Antes de cada ejercicio: `git switch -c ejercicio-N`. Si algo sale mal: `git restore .`
 
-## Ejercicio 1 — Clientes (fácil)
-- `ClienteDto` con `Guardar` (nombre obligatorio, celular de 10 dígitos con `@Pattern(regexp = "\\d{10}")`) y `Respuesta`.
-- `ClienteService`: listar/buscar por nombre, obtener, crear, actualizar.
-- `ClienteController` en `/api/optica/clientes`.
-- ✅ Listo cuando: puedes crear un cliente desde Postman/Thunder Client y verlo en la lista.
+## Ejercicio 1 — Ocupación del cliente (fácil, solo agregar un campo)
+Agregar el campo `ocupacion` (texto, opcional) al cliente.
+- Backend: `Cliente.java` (atributo + getter/setter), `ClienteDto.Guardar` y `ClienteDto.Respuesta`, `ClienteService` (crear y actualizar).
+- Frontend: `vistas/optica/FormCliente.jsx` (un campo más) y `ClienteDetalle.jsx` (mostrarlo).
+- ✅ Listo cuando: lo capturas en el celular y aparece en la ficha.
+- 💡 Aprendes: cómo viaja un dato por TODAS las capas.
 
-## Ejercicio 2 — Recetas (medio)
-- Rutas anidadas: `GET /api/optica/clientes/{id}/recetas` y `POST /api/optica/clientes/{id}/recetas`.
-- Validar que el eje esté entre 0 y 180 (`@Min(0) @Max(180)`).
-- ✅ Listo cuando: un cliente puede tener varias recetas y se listan de la más nueva a la más vieja.
+## Ejercicio 2 — Órdenes que se entregan hoy (fácil)
+Endpoint `GET /api/optica/ordenes/entregas-hoy`: órdenes LISTA o EN_LABORATORIO cuya
+`fechaEntregaEstimada` es hoy.
+- Repository: un método con nombre tipo `findByFechaEntregaEstimadaAndEstadoIn(...)`.
+- Service y Controller: copia el patrón de `listar`.
+- ✅ Listo cuando: lo pruebas en Thunder Client.
+- 💡 Aprendes: consultas derivadas del nombre del método.
 
-## Ejercicio 3 — Armazones con foto (medio)
-- CRUD normal en `/api/optica/armazones`.
-- Subir foto: `POST /api/optica/armazones/{id}/foto` recibiendo `@RequestParam("foto") MultipartFile foto`.
-  Guardar el archivo en la carpeta `app.archivos.carpeta` (ver application.properties) con un nombre
-  único (por ejemplo, `armazon-15.jpg`) y anotar ese nombre en `fotoArchivo`.
-- Servir la foto: `GET /api/optica/armazones/{id}/foto`.
-- ✅ Listo cuando: desde el celular tomas la foto y aparece en la lista.
+## Ejercicio 3 — Mostrarlo en Inicio (medio)
+En `vistas/Inicio.jsx`, agregar un `Pendiente` "entregas para hoy" usando el endpoint del ejercicio 2
+(primero agrégalo en `services/api.js`).
+- 💡 Aprendes: cómo una pantalla pide datos con `useEffect`.
 
-## Ejercicio 4 — Orden de venta de lentes (difícil)
-Nueva entidad `OrdenLentes` (o `VentaOptica`): cliente, receta, armazón, tipo de mica
-(material), tratamientos, precio, descuento, anticipo, saldo y **estado**
-(`EN_LABORATORIO`, `LISTO`, `ENTREGADO`). Usa un `enum` como en `MetodoPago`.
-Antes de programarla, **confirmar con el cliente** cómo trabajan hoy (¿cobran anticipo? ¿quién hace las micas?).
+## Ejercicio 4 — Prueba automática (medio)
+En `OrdenServiceTest.java`, escribir una prueba: "no se puede abonar más que el saldo".
+- 💡 Aprendes: el patrón Dado / Cuando / Entonces y `assertThatThrownBy`.
 
-## Ejercicio 5 — Cumpleaños y cupones (difícil)
-- Entidad `Cupon`: código único, cliente, tipo (`CUMPLEANOS`, `DOS_POR_UNO`, `DESCUENTO`), porcentaje, vigencia, usado.
-- Tarea automática diaria:
-  ```java
-  @Scheduled(cron = "0 0 8 * * *", zone = "America/Mexico_City") // todos los días a las 8:00
-  public void generarCuponesDeCumpleanos() { ... clienteRepository.cumpleanerosDel(mes, dia) ... }
-  ```
-- Endpoint `GET /api/optica/cumpleaneros-hoy` que devuelva cada cliente con su cupón y un enlace
-  `https://wa.me/52XXXXXXXXXX?text=...` (mensaje ya escrito). En pantalla, un botón por cliente que
-  abre WhatsApp; la persona solo presiona "Enviar".
+## Ejercicio 5 — Segunda foto del armazón (difícil)
+Permitir una foto LATERAL además de la frontal (`fotoLateral` en `Armazon.java`, otro endpoint
+de subida y mostrarla en la ficha).
+- 💡 Aprendes: archivos, multipart y reutilizar `AlmacenArchivos`.

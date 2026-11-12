@@ -1,61 +1,98 @@
 import { useEffect, useState } from "react"
-import { productosApi } from "../services/api"
+import { ir } from "../hooks/useRuta"
+import { impresionesApi, ordenesApi, productosApi, promocionesApi } from "../services/api"
+import Icono from "../components/Icono"
 
 /*
-  Pantalla de bienvenida: dos tarjetas (una por negocio) y un aviso de lo que se está agotando.
+  INICIO = tablero de pendientes del día. En lugar de una pantalla vacía, muestra lo que
+  requiere atención en cada negocio, con accesos directos.
 
-  useEffect(() => { ... }, []) = "ejecuta esto UNA vez, cuando la pantalla aparece".
-  Aquí lo usamos para pedirle al backend los productos por resurtir.
+  Promise.allSettled: lanza las 4 peticiones AL MISMO TIEMPO y espera a todas; si una
+  falla, las demás se muestran igual.
 */
-export default function Inicio({ irA }) {
-  const [porResurtir, setPorResurtir] = useState([])
-  const [sinConexion, setSinConexion] = useState(false)
+export default function Inicio() {
+  const [datos, setDatos] = useState(null)
 
   useEffect(() => {
-    productosApi
-      .porResurtir()
-      .then(setPorResurtir)
-      .catch(() => setSinConexion(true))
+    Promise.allSettled([
+      productosApi.porResurtir(),
+      impresionesApi.cola(),
+      ordenesApi.listar(["LISTA"]),
+      promocionesApi.cumpleaneros(0),
+    ]).then(([resurtir, cola, listas, cumple]) =>
+      setDatos({
+        resurtir: resurtir.value ?? [],
+        cola: cola.value ?? [],
+        listas: listas.value ?? [],
+        cumple: cumple.value ?? [],
+        error: [resurtir, cola, listas, cumple].some((r) => r.status === "rejected"),
+      }),
+    )
   }, [])
+
+  const pendientesImpresion = datos?.cola.filter((t) => t.estado === "PENDIENTE").length ?? 0
+  const sinFelicitar = datos?.cumple.filter((c) => c.esHoy && !c.enviado).length ?? 0
 
   return (
     <section>
       <h1 className="nombre-pagina">Buen día</h1>
-      <p className="descripcion-pagina">¿En qué negocio vas a trabajar?</p>
+      <p className="descripcion-pagina">Esto es lo que hay pendiente hoy.</p>
 
-      {sinConexion && (
-        <p className="mensaje-error">No hay conexión con el servidor. ¿Está prendida la computadora principal?</p>
-      )}
+      {datos?.error && <p className="mensaje-error">Algunos datos no se pudieron cargar. ¿Está prendida la computadora principal?</p>}
 
       <div className="tarjetas">
-        <button className="tarjeta tarjeta--ammi" onClick={() => irA("vender")}>
+        <article className="tarjeta tarjeta--ammi">
           <span className="tarjeta-etiqueta">Papelería</span>
           <span className="tarjeta-titulo">AMMI</span>
-          <span className="tarjeta-texto">Vender, imprimir ticket, inventario y corte del día</span>
-        </button>
-        <button className="tarjeta tarjeta--optica" onClick={() => irA("optica")}>
+          <div className="tarjeta-pendientes">
+            <Pendiente icono="impresora" cantidad={pendientesImpresion} texto="por imprimir" alTocar={() => ir("/papeleria/impresiones")} />
+            <Pendiente icono="bandeja" cantidad={datos?.resurtir.length ?? 0} texto="por resurtir" alTocar={() => ir("/papeleria/inventario?resurtir=1")} tono="ambar" />
+          </div>
+          <div className="tarjeta-acciones">
+            <button className="btn btn--primario" onClick={() => ir("/papeleria/vender")}>Vender</button>
+            <button className="btn btn--contorno" onClick={() => ir("/papeleria/impresiones")}>Impresiones</button>
+          </div>
+        </article>
+
+        <article className="tarjeta tarjeta--optica">
           <span className="tarjeta-etiqueta">Óptica</span>
           <span className="tarjeta-titulo">RODRÍGUEZ</span>
-          <span className="tarjeta-texto">Clientes, graduaciones, armazones y promociones</span>
-        </button>
+          <div className="tarjeta-pendientes">
+            <Pendiente icono="lentes" cantidad={datos?.listas.length ?? 0} texto="listas para entregar" alTocar={() => ir("/optica/ordenes?estado=LISTA")} />
+            <Pendiente icono="regalo" cantidad={sinFelicitar} texto="cumpleaños sin felicitar" alTocar={() => ir("/optica/cumpleanos")} tono="ambar" />
+          </div>
+          <div className="tarjeta-acciones">
+            <button className="btn btn--verde" onClick={() => ir("/optica/ordenes/nueva")}>Nueva orden</button>
+            <button className="btn btn--contorno" onClick={() => ir("/optica/clientes")}>Clientes</button>
+          </div>
+        </article>
       </div>
 
-      {porResurtir.length > 0 && (
+      {datos?.resurtir.length > 0 && (
         <div className="panel">
-          <h2 className="panel-titulo">Por resurtir en AMMI ({porResurtir.length})</h2>
+          <h2 className="panel-titulo">Por resurtir en AMMI</h2>
           <ul className="lista-simple">
-            {porResurtir.map((p) => (
+            {datos.resurtir.slice(0, 6).map((p) => (
               <li key={p.id}>
-                <span>{p.nombre}</span>
+                <span>
+                  <span className="emoji-chico">{p.icono ?? "📦"}</span> {p.nombre}
+                </span>
                 <span className="insignia insignia--ambar cifra">quedan {p.existencia}</span>
               </li>
             ))}
           </ul>
-          <button className="btn btn--texto" onClick={() => irA("productos")}>
-            Ir al inventario
-          </button>
         </div>
       )}
     </section>
+  )
+}
+
+function Pendiente({ icono, cantidad, texto, alTocar, tono }) {
+  return (
+    <button className={"pendiente" + (cantidad > 0 ? " pendiente--hay" + (tono ? " pendiente--" + tono : "") : "")} onClick={alTocar}>
+      <Icono nombre={icono} tamano={20} />
+      <strong className="cifra">{cantidad}</strong>
+      <span>{texto}</span>
+    </button>
   )
 }

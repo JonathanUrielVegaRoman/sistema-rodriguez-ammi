@@ -64,6 +64,8 @@ public class ProductoService {
 
         Producto nuevo = new Producto(datos.nombre().trim(), codigo, datos.precio(),
                 datos.existencia(), datos.stockMinimo());
+        nuevo.setIcono(limpiarCodigo(datos.icono()));
+        nuevo.setServicio(datos.servicio());
         return ProductoDto.Respuesta.desde(repositorio.save(nuevo));
     }
 
@@ -78,6 +80,8 @@ public class ProductoService {
         producto.setPrecio(datos.precio());
         producto.setExistencia(datos.existencia());
         producto.setStockMinimo(datos.stockMinimo());
+        producto.setIcono(limpiarCodigo(datos.icono()));
+        producto.setServicio(datos.servicio());
         // No hace falta llamar a save(): dentro de @Transactional, JPA detecta los cambios y los guarda solo.
         return ProductoDto.Respuesta.desde(producto);
     }

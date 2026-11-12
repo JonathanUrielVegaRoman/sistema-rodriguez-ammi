@@ -7,57 +7,48 @@
 | Spring Boot + JPA, sin DAO ni servlets ni HATEOAS | El Repository ya es el DAO; lo demás es para sistemas mucho más grandes |
 | PostgreSQL (relacional) | Datos con relaciones claras y necesidad de transacciones y sumas |
 | Organizar por negocio/tema (`papeleria/producto`) | Todo lo de un tema junto; fácil de copiar como molde |
-| React + Vite sin librerías extra (sin router, sin axios) | Menos cosas que aprender al inicio; se agregan cuando hagan falta |
+| React + Vite sin librerías extra (solo `qrcode`) | Menos cosas que aprender; la navegación se hizo con un hook de 40 líneas (`useRuta`) |
 | Red local, una PC como servidor | El negocio tiene una sola computadora y cada persona su celular; no hay costo de hosting |
+| **PIN por celular** en vez de usuario y contraseña | Son familia: no tiene caso pedir contraseña a cada rato. Pero los clientes usan la misma Wi-Fi para imprimir, así que hace falta separar "personal" de "clientes" |
+| **Contraseña aparte para reportes** | Pedido del dueño: las ventas del día/semana/mes son privadas |
+| Acceso propio (interceptor) en vez de Spring Security | Para 2 niveles basta y se entiende leyéndolo. Si algún día hay usuarios con nombre o acceso desde internet, migrar a Spring Security |
+| Emojis para la papelería, fotos para los armazones | Fotografiar cada lápiz no vale la pena; en lentes la foto sí distingue modelos parecidos |
+| Armazones en **cuadrícula**; clientes en **lista** | Un armazón se reconoce por cómo se ve; un cliente se busca por nombre o celular |
+| Fotos reducidas en el celular antes de subirlas | Una foto de 5 MB pasa a ~200 KB: la cuadrícula carga rápido aunque haya cientos |
+| WhatsApp con enlace prellenado (no automático) | La API de WhatsApp Business requiere trámite con Meta y cuesta |
+| Óptica reporta dinero que ENTRÓ (anticipos + liquidaciones) | Es lo que coincide con la caja de cada día |
 | `ddl-auto=update` | Cómodo para empezar; ver pendiente "Flyway" |
 
-## 🖨️ Idea: "Buzón de impresión" (reemplazo del Bluetooth)
-
-**Problema actual:** los clientes mandan sus archivos por Bluetooth (lento, hay que emparejar).
-WhatsApp no es opción: expone el número personal, los archivos se quedan en el teléfono
-(confidencialidad) y genera conversaciones que hay que atender todo el día.
-
-**Propuesta:**
-1. En el mostrador hay un **código QR**. El cliente lo escanea con su celular conectado a la Wi-Fi del local.
-2. Se abre una página sencilla `/imprimir`: elige su archivo, número de copias, blanco y negro o color.
-3. Recibe un **turno**, por ejemplo **A-023**. No deja nombre ni teléfono.
-4. En la PC aparece una **cola de impresión**: `A-023 · 3 hojas · B/N · 2 copias` → botón **Imprimir** → botón **Cobrar**, que crea la venta en AMMI.
-5. Los archivos se **borran solos** al marcarlos como entregados o al terminar el día.
-
-**Ventajas:** nadie comparte su número, no hay chats que atender, los archivos no se quedan
-en ningún celular y cada impresión queda cobrada en el corte del día.
-
-**Cuidado (seguridad):** si los clientes se conectan a la misma Wi-Fi que el sistema, el resto
-del sistema **debe tener inicio de sesión** antes de abrir el buzón (ver pendiente "Login").
-Mejor aún: una red de invitados o un segundo router solo para clientes. Hay que revisar qué
-permite el módem del local.
-
-## 🎂 Cumpleaños sin automatizar WhatsApp
-Enviar mensajes automáticos por WhatsApp requiere la API de Meta (trámite y costo). Para empezar:
-- Cada mañana el sistema genera cupones para los cumpleañeros (`@Scheduled`).
-- Una pantalla "Cumpleañeros de hoy" muestra un botón por cliente que abre WhatsApp con el
-  mensaje y el código ya escritos (`https://wa.me/52...?text=...`); solo hay que tocar **Enviar**.
-- Solo a clientes que **aceptaron** recibir promociones (campo `aceptaPromociones`).
+## ✅ Ya implementado (antes eran ideas)
+- **Buzón de impresión**: QR en el mostrador → el cliente sube sus archivos sin dar su número → recibe un turno →
+  el personal imprime, cobra (queda como venta de papelería) y los archivos se borran. Si nadie los recoge, se borran
+  solos a las 24 horas.
+- **Cumpleaños**: cada mañana se generan cupones (15 %, 30 días) para quien cumple y aceptó promociones; botón de WhatsApp.
+- **Acceso**: PIN del personal + contraseña del dueño.
 
 ## Pendientes, en orden sugerido
 
-1. **Óptica**: ejercicios 1 a 5 de `backend/.../optica/EJERCICIOS.md` y sus pantallas.
-2. **Login sencillo**: 3 usuarios (mamá, papá, hija) con Spring Security. Imprescindible antes del buzón de impresión.
-3. **Respaldos automáticos**: tarea de Windows que ejecute `pg_dump` cada noche y copie el archivo a una USB o a Google Drive. **Sin respaldos, si se descompone el disco duro se pierde todo.**
-4. **Arranque automático**: que el sistema se encienda solo al prender la PC (tarea programada de Windows o servicio con WinSW).
-5. **IP fija** de la PC en el router (reserva DHCP).
-6. **Impresora de tickets**: confirmar qué impresora tienen.
-   - Térmica USB conectada a la PC: imprimir desde el navegador de la PC (ya funciona, ancho de 58 mm en `app.css`).
-   - Impresora Bluetooth: imprimir desde el celular es más complicado; se puede revisar más adelante (Web Bluetooth/ESC-POS).
-7. **Ícono en el celular**: convertir el frontend en PWA para "Agregar a pantalla de inicio" y que parezca app.
-8. **Flyway**: cuando ya haya datos reales, manejar los cambios de tablas con migraciones versionadas en vez de `ddl-auto=update`.
-9. **Aviso de privacidad** (LFPDPPP): un aviso en el mostrador y una casilla "acepta promociones" al registrar clientes. La graduación es un dato de salud; conviene tratarla con cuidado.
-10. **Reimpresión de tickets** y búsqueda por folio (el backend ya tiene `GET /api/papeleria/ventas/{folio}`).
+1. **Confirmar con el cliente** las preguntas de abajo y ajustar precios de ejemplo (tratamientos, impresiones).
+2. **Respaldos automáticos**: tarea de Windows que ejecute `pg_dump` cada noche y copie el archivo (y la carpeta de
+   fotos `C:/sistema-rodriguez-ammi-datos/archivos/armazones`) a una USB o a Google Drive.
+   **Sin respaldos, si se descompone el disco se pierde todo.**
+3. **Arranque automático**: que el sistema se encienda solo al prender la PC (tarea programada de Windows o servicio con WinSW).
+4. **IP fija** de la PC en el módem (reserva DHCP). Si cambia, el QR del mostrador deja de funcionar.
+5. **Red de invitados** para los clientes del buzón, si el módem lo permite. Hoy el PIN protege los datos, pero
+   aislar la red es una capa extra.
+6. **Impresora de tickets**: confirmar cuál tienen.
+   - Térmica USB en la PC: ya funciona (imprimir desde el navegador de la PC; el ticket mide 54 mm).
+   - Bluetooth: imprimir desde el celular es más complicado; se revisa después (ESC/POS).
+7. **Ícono en el celular (PWA)**: "Agregar a pantalla de inicio" para que parezca app.
+8. **Flyway**: cuando ya haya datos reales, manejar los cambios de tablas con migraciones versionadas.
+9. **Aviso de privacidad** (LFPDPPP) impreso en el mostrador de la óptica. La graduación es un dato de salud.
+10. **HTTPS en la red local** (opcional): hoy la información viaja sin cifrar dentro del Wi-Fi del local.
 
 ## Preguntas para el cliente
-- ¿En la óptica cobran **anticipo** y manejan estado del trabajo (en laboratorio / listo / entregado)?
-- ¿Quién fabrica las micas: laboratorio externo o ellos mismos?
-- ¿Qué tratamientos ofrecen y cuáles son los "caros" que no entran en el 2x1?
+- ¿El lente de regalo (2x1) incluye el armazón o solo las micas? *(Hoy: micas y tratamientos gratis; el armazón se cobra con el precio que se capture, que puede ser $0.)*
+- ¿Qué tratamientos son "caros" y no entran en el regalo? *(Hoy: filtro de luz azul, fotocromático y polarizado.)*
+- ¿Qué porcentaje y vigencia quieren para el cupón de cumpleaños? *(Hoy: 15 % por 30 días; se cambia en `application.properties`.)*
+- ¿Precios reales de impresión B/N y color? *(Hoy: $2 y $6 por hoja.)*
+- ¿Quién fabrica las micas: laboratorio externo o ellos mismos? (para el tiempo de entrega estimado)
 - ¿Qué impresora de tickets tienen (marca, USB o Bluetooth)?
-- ¿Cobran impresiones por hoja, diferenciando blanco y negro y color?
 - ¿El módem permite red de invitados?

@@ -43,7 +43,12 @@ public final class ProductoDto {
             int existencia,
 
             @PositiveOrZero(message = "El stock mínimo no puede ser negativo")
-            int stockMinimo
+            int stockMinimo,
+
+            @Size(max = 16)
+            String icono,
+
+            boolean servicio
     ) {
     }
 
@@ -55,6 +60,8 @@ public final class ProductoDto {
             BigDecimal precio,
             int existencia,
             int stockMinimo,
+            String icono,
+            boolean servicio,
             boolean necesitaResurtir
     ) {
         /** Convierte una Entity en DTO de salida (a esto se le llama "mapear"). */
@@ -66,6 +73,8 @@ public final class ProductoDto {
                     p.getPrecio(),
                     p.getExistencia(),
                     p.getStockMinimo(),
+                    p.getIcono(),
+                    p.isServicio(),
                     p.necesitaResurtir()
             );
         }

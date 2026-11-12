@@ -8,13 +8,15 @@ import java.util.List;
 
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
-    List<Cliente> findByNombreContainingIgnoreCaseOrderByNombreAsc(String texto);
+    /** Busca por parte del nombre o del celular. "ana" encuentra a "Ana López"; "5512" encuentra su número. */
+    List<Cliente> findTop50ByNombreContainingIgnoreCaseOrCelularContainingOrderByNombreAsc(String nombre, String celular);
 
-    List<Cliente> findByCelular(String celular);
+    /** Los últimos registrados (para la lista inicial, sin búsqueda). */
+    List<Cliente> findTop30ByOrderByFechaRegistroDesc();
 
     /**
      * Cumpleañeros de un día (sin importar el año). Ejemplo: mes = 11, dia = 11.
-     * Esta consulta la usará la tarea automática de cada mañana (ver EJERCICIOS.md).
+     * La usa la tarea automática de cada mañana (CuponService).
      */
     @Query("""
             SELECT c FROM Cliente c

@@ -128,12 +128,13 @@ nunca hablan con el backend directamente; le piden a `api.js`.
 
 | Semana | Qué hacer | Cómo saber que lo lograste |
 |---|---|---|
-| 1 | Instalar todo, correr el sistema, vender algo, ver el corte | Puedes explicar con el dibujo del punto 2 qué pasó |
+| 1 | Instalar todo, correr el sistema, vender algo, crear una orden de lentes, ver el reporte | Puedes explicar con el dibujo del punto 2 qué pasó |
 | 2 | Git básico: clonar, rama, commit, push, pull request | Subiste un cambio pequeño (por ejemplo, el texto del ticket) |
 | 3 | Leer `papeleria/producto` completo, con comentarios | Puedes decir qué hace cada archivo sin mirarlo |
-| 4 | **Ejercicio 1** de `optica/EJERCICIOS.md` (Clientes) con ayuda de IA | Creaste un cliente desde la API |
-| 5–6 | JavaScript básico + pantalla de Clientes en React | El cliente se da de alta desde el celular |
-| 7+ | Recetas, armazones con foto, cumpleaños | Lo usa la familia de verdad |
+| 4 | Leer `optica/cliente` y compararlo con `papeleria/producto` (mismo patrón) | Puedes señalar qué cambia y qué se repite |
+| 5 | **Ejercicio 1** de `optica/EJERCICIOS.md` con ayuda de IA | El campo nuevo aparece en el celular |
+| 6–7 | JavaScript básico + ejercicios 2 y 3 | Ves tu cambio en la pantalla de Inicio |
+| 8+ | Ejercicios 4 y 5, y pendientes de `06-ideas-y-pendientes.md` | Lo usa la familia de verdad |
 
 Para practicar la API sin frontend usa la extensión **Thunder Client** de VS Code
 (o Postman): ahí escribes `GET http://localhost:8080/api/papeleria/productos` y ves el JSON.

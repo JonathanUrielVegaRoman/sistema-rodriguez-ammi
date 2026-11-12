@@ -7,10 +7,8 @@ import java.util.Optional;
 
 public interface ArmazonRepository extends JpaRepository<Armazon, Long> {
 
-    Optional<Armazon> findByCodigo(String codigo);
+    Optional<Armazon> findByCodigoIgnoreCase(String codigo);
 
-    /** Buscar armazones parecidos por talla: "todos los de 52 de ancho". */
-    List<Armazon> findByAnchoLenteAndActivoTrue(Integer anchoLente);
-
-    List<Armazon> findByModeloContainingIgnoreCaseAndActivoTrue(String texto);
+    /** Todo el catálogo activo. Son pocos cientos, así que los filtros se aplican en el Service. */
+    List<Armazon> findByActivoTrueOrderByCodigoAsc();
 }
