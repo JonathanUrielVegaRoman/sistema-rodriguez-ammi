@@ -1,6 +1,7 @@
 package mx.rodriguezammi.papeleria.producto;
 
 import jakarta.validation.Valid;
+import mx.rodriguezammi.papeleria.inventario.InventarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ import java.util.List;
  *   GET     /api/papeleria/productos               lista (opcional ?q=texto)
  *   GET     /api/papeleria/productos/{id}          uno solo
  *   GET     /api/papeleria/productos/por-resurtir  los que se están agotando
+ *   GET     /api/papeleria/productos/{id}/movimientos   historial de entradas y salidas
  *   POST    /api/papeleria/productos               crea uno nuevo
  *   PUT     /api/papeleria/productos/{id}          edita uno existente
  *   POST    /api/papeleria/productos/{id}/resurtir suma existencia
@@ -52,6 +54,12 @@ public class ProductoController {
     @GetMapping("/{id}")
     public ProductoDto.Respuesta obtener(@PathVariable Long id) {
         return servicio.obtener(id);
+    }
+
+    /** Historial de entradas y salidas de un producto (los últimos 50 movimientos). */
+    @GetMapping("/{id}/movimientos")
+    public List<InventarioService.Movimiento> movimientos(@PathVariable Long id) {
+        return servicio.historial(id);
     }
 
     @GetMapping("/por-resurtir")

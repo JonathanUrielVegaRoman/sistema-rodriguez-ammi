@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { productosApi, ventasApi } from "../../services/api"
 import { dinero, NOMBRES_PAGO } from "../../utils/formato"
 import { EMOJI_GENERICO } from "../../utils/emojis"
 import Ticket from "../../components/Ticket"
+import BotonImprimir from "../../components/BotonImprimir"
+import CampoReferencia from "../../components/CampoReferencia"
+import { nuevaClave } from "../../utils/clave"
 
 /*
   PUNTO DE VENTA de la papelería.
@@ -21,9 +24,15 @@ export default function Vender() {
   const [carrito, setCarrito] = useState([]) // [{ producto, cantidad }]
   const [metodoPago, setMetodoPago] = useState("EFECTIVO")
   const [pagaCon, setPagaCon] = useState("")
+  const [referencia, setReferencia] = useState("") // clave de rastreo / autorización (si no es efectivo)
+  // Clave única de ESTE cobro: cambia cuando cambia el carrito o el método. Si el Wi-Fi falla y
+  // se toca "Cobrar" dos veces con el mismo carrito, el servidor lo cobra una sola vez.
+  const claveCobro = useMemo(() => nuevaClave(), [carrito, metodoPago])
   const [error, setError] = useState("")
   const [ticket, setTicket] = useState(null)
   const [cobrando, setCobrando] = useState(false)
+  const [reimpresion, setReimpresion] = useState(false) // true = se está viendo un ticket viejo
+  const [folioBuscado, setFolioBuscado] = useState("")
 
   // Cargamos el catálogo; se recarga después de cada venta para ver existencias al día.
   useEffect(() => {
@@ -67,11 +76,14 @@ export default function Vender() {
       const nuevoTicket = await ventasApi.registrar({
         metodoPago,
         pagaCon: metodoPago === "EFECTIVO" && pagaCon ? Number(pagaCon) : null,
+        referenciaPago: metodoPago !== "EFECTIVO" ? referencia.trim() || null : null,
+        claveUnica: claveCobro,
         renglones: carrito.map((r) => ({ productoId: r.producto.id, cantidad: r.cantidad })),
       })
       setTicket(nuevoTicket)
       setCarrito([])
       setPagaCon("")
+      setReferencia("")
     } catch (e) {
       setError(e.message)
     } finally {
@@ -79,14 +91,31 @@ export default function Vender() {
     }
   }
 
+  // REIMPRIMIR: buscar un ticket anterior por su folio (viene impreso en el ticket).
+  async function buscarTicket(e) {
+    e.preventDefault()
+    setError("")
+    try {
+      setTicket(await ventasApi.ticket(folioBuscado))
+      setReimpresion(true)
+      setFolioBuscado("")
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   if (ticket) {
     return (
       <section className="angosto">
-        <p className="alerta alerta--exito">Venta registrada</p>
+        {ticket.cancelada ? (
+          <p className="mensaje-error">Ticket CANCELADO: {ticket.motivoCancelacion}</p>
+        ) : (
+          <p className="alerta alerta--exito">{reimpresion ? `Ticket folio ${ticket.folio}` : "Venta registrada"}</p>
+        )}
         <Ticket ticket={ticket} />
         <div className="acciones">
-          <button className="btn btn--primario" onClick={() => window.print()}>Imprimir ticket</button>
-          <button className="btn btn--contorno" onClick={() => setTicket(null)}>Nueva venta</button>
+          <BotonImprimir mandar={() => ventasApi.imprimir(ticket.folio)} texto="Imprimir ticket" />
+          <button className="btn btn--contorno" onClick={() => { setTicket(null); setReimpresion(false) }}>Nueva venta</button>
         </div>
       </section>
     )
@@ -159,6 +188,7 @@ export default function Vender() {
                 </button>
               ))}
             </div>
+            <CampoReferencia metodo={metodoPago} valor={referencia} alCambiar={setReferencia} />
             {metodoPago === "EFECTIVO" && (
               <label className="campo">
                 <span className="etiqueta">Paga con (opcional)</span>
@@ -171,6 +201,11 @@ export default function Vender() {
               {cobrando ? "Cobrando…" : `Cobrar ${dinero(total)}`}
             </button>
           </div>
+
+          <form className="fila reimprimir" onSubmit={buscarTicket}>
+            <input className="entrada cifra" inputMode="numeric" placeholder="Folio de un ticket anterior" value={folioBuscado} onChange={(e) => setFolioBuscado(e.target.value.replace(/\D/g, ""))} aria-label="Folio del ticket" />
+            <button className="btn btn--contorno" disabled={!folioBuscado}>Reimprimir</button>
+          </form>
         </div>
       </div>
     </section>

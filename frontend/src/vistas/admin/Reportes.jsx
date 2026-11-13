@@ -73,6 +73,18 @@ function ContenidoReportes() {
     }
   }
 
+  async function descargarInventario() {
+    setError("")
+    setDescargando(true)
+    try {
+      await reportesApi.inventarioExcel()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setDescargando(false)
+    }
+  }
+
   function elegir(c) {
     setClave(c)
     setRango(periodo(c))
@@ -103,6 +115,9 @@ function ContenidoReportes() {
         </button>
         <button className="btn btn--contorno" onClick={() => descargarExcel()} disabled={descargando}>
           Excel de todo el historial
+        </button>
+        <button className="btn btn--contorno" onClick={descargarInventario} disabled={descargando}>
+          Excel de inventario
         </button>
       </div>
 

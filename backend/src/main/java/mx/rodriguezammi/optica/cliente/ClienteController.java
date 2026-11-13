@@ -57,6 +57,16 @@ public class ClienteController {
                 : "El cliente tiene órdenes, así que se archivó: ya no aparece en búsquedas, pero sus ventas se conservan");
     }
 
+    public record Seleccion(@jakarta.validation.constraints.NotEmpty(message = "No se eligió ningún cliente")
+                            @jakarta.validation.constraints.Size(max = 200) List<Long> ids) {
+    }
+
+    /** Borrar (o archivar) varios a la vez: POST /api/optica/clientes/eliminar { "ids": [3, 7, 9] } */
+    @PostMapping("/eliminar")
+    public ClienteService.ResultadoVarios eliminarVarios(@Valid @RequestBody Seleccion seleccion) {
+        return servicio.eliminarVarios(seleccion.ids());
+    }
+
     @PostMapping("/{id}/restaurar")
     public ClienteDto.Respuesta restaurar(@PathVariable Long id) {
         return servicio.restaurar(id);

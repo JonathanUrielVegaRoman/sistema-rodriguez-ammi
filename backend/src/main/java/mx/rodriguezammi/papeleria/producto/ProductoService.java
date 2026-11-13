@@ -2,6 +2,8 @@ package mx.rodriguezammi.papeleria.producto;
 
 import mx.rodriguezammi.comun.exception.RecursoNoEncontradoException;
 import mx.rodriguezammi.comun.exception.ReglaDeNegocioException;
+import mx.rodriguezammi.papeleria.inventario.InventarioService;
+import mx.rodriguezammi.papeleria.inventario.MovimientoInventario;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,14 +32,16 @@ import java.util.List;
 public class ProductoService {
 
     private final ProductoRepository repositorio;
+    private final InventarioService inventario;
 
     /**
      * INYECCIÓN DE DEPENDENCIAS por constructor:
      * nosotros no hacemos "new ProductoRepository()"; Spring ve que lo pedimos aquí
      * y nos lo entrega ya listo.
      */
-    public ProductoService(ProductoRepository repositorio) {
+    public ProductoService(ProductoRepository repositorio, InventarioService inventario) {
         this.repositorio = repositorio;
+        this.inventario = inventario;
     }
 
     public List<ProductoDto.Respuesta> listar(String busqueda) {
@@ -66,12 +70,15 @@ public class ProductoService {
                 datos.existencia(), datos.stockMinimo());
         nuevo.setIcono(limpiarCodigo(datos.icono()));
         nuevo.setServicio(datos.servicio());
-        return ProductoDto.Respuesta.desde(repositorio.save(nuevo));
+        Producto guardado = repositorio.save(nuevo);
+        inventario.registrar(guardado, MovimientoInventario.Tipo.ALTA, guardado.getExistencia(), "Alta del producto");
+        return ProductoDto.Respuesta.desde(guardado);
     }
 
     @Transactional
     public ProductoDto.Respuesta actualizar(Long id, ProductoDto.Guardar datos) {
-        Producto producto = buscarEntidad(id);
+        Producto producto = bloquearEntidad(id);
+        int existenciaAnterior = producto.getExistencia();
         String codigo = limpiarCodigo(datos.codigoBarras());
         validarCodigoUnico(codigo, id);
 
@@ -82,14 +89,17 @@ public class ProductoService {
         producto.setStockMinimo(datos.stockMinimo());
         producto.setIcono(limpiarCodigo(datos.icono()));
         producto.setServicio(datos.servicio());
+        // Si al editar se cambió la existencia a mano, queda anotado como AJUSTE.
+        inventario.registrar(producto, MovimientoInventario.Tipo.AJUSTE, producto.getExistencia() - existenciaAnterior, "Corrección manual");
         // No hace falta llamar a save(): dentro de @Transactional, JPA detecta los cambios y los guarda solo.
         return ProductoDto.Respuesta.desde(producto);
     }
 
     @Transactional
     public ProductoDto.Respuesta resurtir(Long id, int cantidad) {
-        Producto producto = buscarEntidad(id);
+        Producto producto = bloquearEntidad(id);
         producto.setExistencia(producto.getExistencia() + cantidad);
+        inventario.registrar(producto, MovimientoInventario.Tipo.RESURTIDO, cantidad, null);
         return ProductoDto.Respuesta.desde(producto);
     }
 
@@ -106,6 +116,22 @@ public class ProductoService {
     public Producto buscarEntidad(Long id) {
         return repositorio.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("No existe el producto con id " + id));
+    }
+
+    /**
+     * Igual que buscarEntidad, pero con CANDADO: nadie más puede cambiar este producto hasta que
+     * termine la transacción actual. Úsalo antes de modificar la existencia.
+     * (Ver la explicación en ProductoRepository.bloquearPorId.)
+     */
+    @Transactional
+    public Producto bloquearEntidad(Long id) {
+        return repositorio.bloquearPorId(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe el producto con id " + id));
+    }
+
+    public List<InventarioService.Movimiento> historial(Long id) {
+        buscarEntidad(id); // 404 si no existe
+        return inventario.historial(id);
     }
 
     // ---------- Ayudantes privados ----------

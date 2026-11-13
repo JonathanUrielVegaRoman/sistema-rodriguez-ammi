@@ -144,6 +144,12 @@ public class CuponService {
 
     // ---------------- Uso al crear una orden ----------------
 
+    /** Pone candado al cupón (si existe) mientras se crea la orden. Después se valida con validar(). */
+    @Transactional
+    public void bloquear(String codigo) {
+        cupones.bloquearPorCodigo(codigo.trim());
+    }
+
     /** Revisa que el cupón exista, esté vigente, no se haya usado y sea de ese cliente. */
     public Cupon validar(String codigo, Long clienteId) {
         Cupon cupon = cupones.findByCodigoIgnoreCase(codigo.trim())

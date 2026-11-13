@@ -81,6 +81,14 @@ public class OrdenLentes {
     @Column(length = 500)
     private String notas;
 
+    /** Cuándo se marcó como LISTA. Sirve para avisar de lentes que llevan días sin recogerse. */
+    @Column(name = "fecha_lista")
+    private LocalDateTime fechaLista;
+
+    /** Para no crear la orden dos veces si el celular reintenta (ver Venta.claveUnica). */
+    @Column(name = "clave_unica", unique = true, length = 40)
+    private String claveUnica;
+
     protected OrdenLentes() {
     }
 
@@ -135,7 +143,15 @@ public class OrdenLentes {
     public LocalDateTime getFecha() { return fecha; }
     public LocalDate getFechaEntregaEstimada() { return fechaEntregaEstimada; }
     public EstadoOrden getEstado() { return estado; }
-    public void setEstado(EstadoOrden estado) { this.estado = estado; }
+    public void setEstado(EstadoOrden estado) {
+        this.estado = estado;
+        if (estado == EstadoOrden.LISTA) {
+            this.fechaLista = LocalDateTime.now();
+        }
+    }
+    public LocalDateTime getFechaLista() { return fechaLista; }
+    public String getClaveUnica() { return claveUnica; }
+    public void setClaveUnica(String claveUnica) { this.claveUnica = claveUnica; }
     public List<PartidaLente> getPartidas() { return partidas; }
     public List<PagoOrden> getPagos() { return pagos; }
     public Cupon getCupon() { return cupon; }

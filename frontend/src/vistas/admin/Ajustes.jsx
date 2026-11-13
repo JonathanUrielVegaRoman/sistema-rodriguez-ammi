@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react"
-import { accesoApi, clientesApi, promocionesApi, tratamientosApi } from "../../services/api"
+import { accesoApi, adminApi, clientesApi, impresionesApi, promocionesApi, tratamientosApi } from "../../services/api"
 import { dinero, fechaCorta } from "../../utils/formato"
 import PuertaAdmin from "../../components/PuertaAdmin"
 
 /*
   AJUSTES DEL DUEÑO:
+    0. Generales: bloqueo por inactividad e impresora de tickets.
     1. Tratamientos: precio y si entran en el lente de regalo (2x1).
     2. Cupones de descuento especial (para un cliente o para cualquiera).
     3. Seguridad: sacar a todos los celulares (si se pierde o roban uno).
@@ -13,10 +14,69 @@ export default function Ajustes() {
   return (
     <PuertaAdmin>
       <h1 className="titulo-seccion">Ajustes</h1>
+      <Generales />
       <Tratamientos />
       <Cupones />
       <Seguridad />
     </PuertaAdmin>
+  )
+}
+
+function Generales() {
+  const [a, setA] = useState(null)
+  const [impresoras, setImpresoras] = useState([])
+  const [mensaje, setMensaje] = useState("")
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    adminApi.ajustes().then(setA).catch((e) => setError(e.message))
+    impresionesApi.impresoras().then((r) => setImpresoras(r.nombres)).catch(() => {})
+  }, [])
+
+  async function guardar(e) {
+    e.preventDefault()
+    setError("")
+    setMensaje("")
+    try {
+      setA(await adminApi.guardarAjustes({ ...a, minutosInactividad: Number(a.minutosInactividad), anchoTicketMm: Number(a.anchoTicketMm) }))
+      setMensaje("Ajustes guardados. El nuevo tiempo de bloqueo aplica la próxima vez que cada celular entre.")
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  if (!a) return error ? <p className="mensaje-error">{error}</p> : null
+
+  return (
+    <form className="panel" onSubmit={guardar}>
+      <h2 className="panel-titulo">Generales</h2>
+      <div className="rejilla">
+        <label className="campo">
+          <span className="etiqueta">Pedir el PIN otra vez después de (minutos sin usar)</span>
+          <input className="entrada cifra" type="number" min="1" max="480" value={a.minutosInactividad} onChange={(e) => setA({ ...a, minutosInactividad: e.target.value })} />
+          <span className="texto-tenue">Recomendado: 10. Menos = más seguro, pero más veces hay que escribir el PIN.</span>
+        </label>
+        <label className="campo">
+          <span className="etiqueta">Impresora de tickets</span>
+          <select className="entrada" value={a.impresoraTickets ?? ""} onChange={(e) => setA({ ...a, impresoraTickets: e.target.value || null })}>
+            <option value="">Ninguna (imprimir desde el navegador)</option>
+            {impresoras.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <span className="texto-tenue">Con impresora elegida, tickets y notas salen directo, sin el cuadro de Ctrl+P.</span>
+        </label>
+        <div className="campo">
+          <span className="etiqueta">Ancho del papel del ticket</span>
+          <div className="segmentado">
+            {[58, 80].map((mm) => (
+              <button key={mm} type="button" className={Number(a.anchoTicketMm) === mm ? "activo" : ""} onClick={() => setA({ ...a, anchoTicketMm: mm })}>{mm} mm</button>
+            ))}
+          </div>
+        </div>
+      </div>
+      {error && <p className="mensaje-error">{error}</p>}
+      {mensaje && <p className="alerta alerta--exito">{mensaje}</p>}
+      <div><button className="btn btn--primario">Guardar</button></div>
+    </form>
   )
 }
 
@@ -182,6 +242,11 @@ function Cupones() {
 
 function Seguridad() {
   const [mensaje, setMensaje] = useState("")
+  const [clavesDeEjemplo, setClavesDeEjemplo] = useState(false)
+
+  useEffect(() => {
+    accesoApi.clavesDeEjemplo().then(setClavesDeEjemplo).catch(() => {})
+  }, [])
 
   async function cerrarTodos() {
     if (!window.confirm("Todos los celulares del personal tendrán que volver a escribir el PIN. ¿Continuar?")) return
@@ -196,6 +261,13 @@ function Seguridad() {
   return (
     <div className="panel">
       <h2 className="panel-titulo">Seguridad</h2>
+      {clavesDeEjemplo && (
+        <p className="mensaje-error">
+          El sistema sigue usando el PIN o la contraseña de EJEMPLO (1234 / admin123), que cualquiera puede adivinar.
+          Cámbialos antes de capturar datos reales: en la computadora principal, archivo application-local.properties,
+          líneas app.acceso.pin y app.acceso.admin-password, y reinicia el sistema.
+        </p>
+      )}
       <p className="texto-tenue">Si se pierde o roban un celular del personal, saca a todos y vuelvan a entrar con el PIN.</p>
       <button className="btn btn--peligro" onClick={cerrarTodos}>Cerrar sesión en todos los celulares</button>
       {mensaje && <p className="aviso-barra">{mensaje}</p>}

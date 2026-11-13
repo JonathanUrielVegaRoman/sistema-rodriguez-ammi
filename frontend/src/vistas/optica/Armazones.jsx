@@ -3,6 +3,8 @@ import { armazonesApi } from "../../services/api"
 import { dinero } from "../../utils/formato"
 import { reducirFoto } from "../../utils/imagen"
 import CuadriculaArmazones from "../../components/CuadriculaArmazones"
+import ComparadorArmazon3D from "../../components/ComparadorArmazon3D"
+import { FORMAS } from "../../utils/geometriaArmazon"
 import Modal from "../../components/Modal"
 import Icono from "../../components/Icono"
 
@@ -11,11 +13,13 @@ import Icono from "../../components/Icono"
 
   Tocar un armazón abre su ficha: foto grande, medidas, ubicación, y botones para cambiar
   la foto o editar. La foto se toma con la cámara del celular directamente desde aquí.
+  La pestaña "Modelo 3D y tallas" dibuja el armazón con sus medidas y permite encimarlo
+  con otro para comparar tamaños (ver components/Armazon3D.jsx).
 
   Consejo para las fotos (para que la cuadrícula se vea pareja):
     fondo blanco, armazón de frente, a la misma distancia, con buena luz.
 */
-const VACIO = { codigo: "", marca: "", modelo: "", color: "", anchoLente: "", puente: "", varilla: "", precio: "", existencia: 1, ubicacion: "" }
+const VACIO = { codigo: "", marca: "", modelo: "", color: "", anchoLente: "", puente: "", varilla: "", precio: "", existencia: 1, ubicacion: "", forma: "", colorHex: "", altoLente: "" }
 
 export default function Armazones() {
   const [recarga, setRecarga] = useState(0)
@@ -23,6 +27,7 @@ export default function Armazones() {
   const [formulario, setFormulario] = useState(null) // null = cerrado
   const [error, setError] = useState("")
   const [subiendo, setSubiendo] = useState(false)
+  const [pestana, setPestana] = useState("foto") // en la ficha: "foto" o "3d"
 
   const recargar = () => setRecarga((n) => n + 1)
 
@@ -38,6 +43,7 @@ export default function Armazones() {
       id: a.id, codigo: a.codigo, marca: a.marca ?? "", modelo: a.modelo ?? "", color: a.color ?? "",
       anchoLente: a.anchoLente ?? "", puente: a.puente ?? "", varilla: a.varilla ?? "",
       precio: a.precio, existencia: a.existencia, ubicacion: a.ubicacion ?? "",
+      forma: a.forma ?? "", colorHex: a.colorHex ?? "", altoLente: a.altoLente ?? "",
     })
   }
 
@@ -50,6 +56,7 @@ export default function Armazones() {
       ...formulario,
       anchoLente: numero(formulario.anchoLente), puente: numero(formulario.puente), varilla: numero(formulario.varilla),
       precio: Number(formulario.precio), existencia: Number(formulario.existencia),
+      forma: formulario.forma || null, colorHex: formulario.colorHex || null, altoLente: numero(formulario.altoLente),
     }
     try {
       const guardado = formulario.id ? await armazonesApi.actualizar(formulario.id, datos) : await armazonesApi.crear(datos)
@@ -103,14 +110,24 @@ export default function Armazones() {
         <button className="btn btn--verde" onClick={abrirNuevo}>+ Armazón</button>
       </div>
 
-      <CuadriculaArmazones recarga={recarga} alTocar={(a) => { setError(""); setFicha(a) }} />
+      <CuadriculaArmazones recarga={recarga} alTocar={(a) => { setError(""); setPestana("foto"); setFicha(a) }} />
 
       {ficha && (
-        <Modal titulo={ficha.codigo} alCerrar={() => setFicha(null)}>
+        <Modal titulo={ficha.codigo} alCerrar={() => setFicha(null)} ancho={pestana === "3d"}>
           <div className="ficha-armazon">
+            <div className="segmentado" role="tablist">
+              <button type="button" role="tab" aria-selected={pestana === "foto"} className={pestana === "foto" ? "activo" : ""} onClick={() => setPestana("foto")}>Foto</button>
+              <button type="button" role="tab" aria-selected={pestana === "3d"} className={pestana === "3d" ? "activo" : ""} onClick={() => setPestana("3d")}>Modelo 3D y tallas</button>
+            </div>
+
+            {pestana === "3d" && <ComparadorArmazon3D armazon={ficha} />}
+
+            {pestana === "foto" && (
             <div className="ficha-foto">
               {ficha.fotoUrl ? <img src={ficha.fotoUrl} alt={ficha.codigo} /> : <span className="armazon-sin-foto"><Icono nombre="camara" tamano={36} />Sin foto</span>}
             </div>
+            )}
+            {pestana === "foto" && (
             <div className="acciones">
               {/* capture="environment" abre directo la cámara trasera del celular */}
               <label className="btn btn--primario">
@@ -122,6 +139,7 @@ export default function Armazones() {
                 <input type="file" accept="image/*" hidden onChange={cambiarFoto} disabled={subiendo} />
               </label>
             </div>
+            )}
             <dl className="datos">
               <dt>Marca / modelo</dt>
               <dd>{[ficha.marca, ficha.modelo].filter(Boolean).join(" · ") || "—"}</dd>
@@ -188,6 +206,29 @@ export default function Armazones() {
                 <label className="campo">
                   <span className="etiqueta">Varilla</span>
                   <input className="entrada" type="number" min="110" max="160" inputMode="numeric" placeholder="140" {...campo("varilla")} />
+                </label>
+              </div>
+            </fieldset>
+            <fieldset className="grupo">
+              <legend className="etiqueta">Para el modelo 3D (opcional)</legend>
+              <div className="chips" role="group" aria-label="Forma del armazón">
+                {Object.entries(FORMAS).map(([clave, f]) => (
+                  <button key={clave} type="button" className={"chip" + (formulario.forma === clave ? " chip--activo" : "")} onClick={() => setFormulario({ ...formulario, forma: formulario.forma === clave ? "" : clave })}>
+                    {f.nombre}
+                  </button>
+                ))}
+              </div>
+              <div className="rejilla">
+                <label className="campo">
+                  <span className="etiqueta">Color para dibujarlo</span>
+                  <span className="fila">
+                    <input type="color" className="entrada-color" value={formulario.colorHex || "#1b1b1b"} onChange={(e) => setFormulario({ ...formulario, colorHex: e.target.value })} aria-label="Color del armazón" />
+                    <span className="texto-tenue">{formulario.colorHex ? formulario.colorHex : "sin elegir (negro)"}</span>
+                  </span>
+                </label>
+                <label className="campo">
+                  <span className="etiqueta">Alto del lente en mm (si lo sabes)</span>
+                  <input className="entrada" type="number" min="15" max="65" inputMode="numeric" placeholder="Se estima por la forma" {...campo("altoLente")} />
                 </label>
               </div>
             </fieldset>

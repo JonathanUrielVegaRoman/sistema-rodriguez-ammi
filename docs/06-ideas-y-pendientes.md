@@ -20,6 +20,9 @@
 | Impresión directa desde el backend (Java + PDFBox) | El backend corre en la misma PC que tiene la impresora: así se imprime desde el celular, sin abrir pestañas ni Ctrl+P. Solo PDF e imágenes; Word/Excel necesitan Office |
 | Excel con Apache POI | Fechas, horas y montos como valores reales de Excel (se pueden filtrar y sumar) |
 | Sesión de admin en `sessionStorage` + cierre al salir de #/admin | Pedido del dueño: si se sale de Administración, aunque sea por error, ya no se ven las ventas |
+| Bloqueo por inactividad (10 min por defecto) en vez de pedir el PIN siempre | Pedirlo siempre estorba al atender; 10 minutos protege un celular olvidado sin interrumpir. Se aplica en la pantalla y también en el servidor |
+| Cancelar ventas solo como administrador | Cancelar "desaparece" dinero del reporte; si cualquiera pudiera, el corte dejaría de ser confiable |
+| Tickets directo a la impresora desde el backend, con respaldo a Ctrl+P | Funciona desde el celular; si no hay impresora de tickets configurada, sigue funcionando como antes |
 | Clientes: borrar o archivar | Borrar a alguien con órdenes rompería el historial de ventas; archivarlo lo oculta sin perder dinero |
 | `ddl-auto=update` | Cómodo para empezar; ver pendiente "Flyway" |
 
@@ -30,11 +33,29 @@
 - **Cumpleaños**: cada mañana se generan cupones (15 %, 30 días) para quien cumple y aceptó promociones; botón de WhatsApp.
 - **Acceso**: PIN del personal + contraseña del dueño.
 
-## Ideas para después
-- **Tickets directo a la impresora** (sin el cuadro de Ctrl+P): usar el mismo mecanismo del buzón
-  para mandar el ticket a una impresora térmica, o abrir Chrome con `--kiosk-printing` en la PC del mostrador.
-- **Cancelar o devolver una venta de la papelería** (solo el administrador), regresando la mercancía al inventario.
-- **Reimprimir tickets** buscando por folio.
+## ✅ Implementado en esta ronda
+- Tickets y notas directo a la impresora de tickets (Ajustes → Generales).
+- Cancelar ventas de la papelería (Administración → Tickets), con motivo y regreso al inventario.
+- Reimprimir tickets por folio (Vender) y desde Administración.
+- Borrar varios clientes a la vez.
+- Bloqueo por inactividad.
+
+## Modelo 3D de armazones: qué es y qué sigue
+Lo que hay: un modelo **paramétrico** (dibujado con medidas, forma y color) para ver tamaño y
+proporciones y comparar tallas. No es un escaneo del armazón real.
+Lo que se podría hacer después, de menor a mayor esfuerzo:
+1. **Probador virtual**: ver el armazón sobre la cara del cliente con la cámara. Requiere HTTPS
+   (los navegadores no dan acceso a la cámara en vivo sin él) y una librería de detección de rostro.
+2. **Modelos escaneados** de cada armazón (fotogrametría): muy fiel, pero hay que escanear pieza
+   por pieza; solo vale la pena para los modelos más vendidos.
+
+## Pagos con transferencia y terminal
+Hoy el sistema **registra el método** (Efectivo, Tarjeta, Transferencia) en cada venta y cada abono, y los
+reportes y el Excel los separan. **No verifica** que el dinero haya llegado: eso se revisa en la app del banco
+o en la terminal. Opciones para crecer, de menor a mayor esfuerzo:
+1. ✅ Guardar una **referencia** en cada pago (clave de rastreo SPEI o número de autorización del voucher). **Ya implementado.**
+2. Pantalla de **conciliación**: transferencias del día con casilla "confirmada en el banco".
+3. Terminal con **API** (Mercado Pago Point, Clip, etc.): cobrar desde el sistema y recibir la confirmación sola.
 
 ## Pendientes, en orden sugerido
 

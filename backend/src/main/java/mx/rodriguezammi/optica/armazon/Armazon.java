@@ -62,6 +62,20 @@ public class Armazon {
     @Column(nullable = false)
     private boolean activo = true;
 
+    // ----- Datos para el modelo 3D (todos opcionales) -----
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private FormaArmazon forma;
+
+    /** Color para dibujarlo, en formato web: "#1a1a1a" (negro), "#8b5a2b" (carey)... */
+    @Column(name = "color_hex", length = 7)
+    private String colorHex;
+
+    /** Alto del lente en mm (la medida "B"). No viene en la varilla; si falta, se estima según la forma. */
+    @Column(name = "alto_lente")
+    private Integer altoLente;
+
     protected Armazon() {
     }
 
@@ -103,6 +117,12 @@ public class Armazon {
     public void setFotoArchivo(String fotoArchivo) { this.fotoArchivo = fotoArchivo; }
     public String getUbicacion() { return ubicacion; }
     public void setUbicacion(String ubicacion) { this.ubicacion = ubicacion; }
+    public FormaArmazon getForma() { return forma; }
+    public void setForma(FormaArmazon forma) { this.forma = forma; }
+    public String getColorHex() { return colorHex; }
+    public void setColorHex(String colorHex) { this.colorHex = colorHex; }
+    public Integer getAltoLente() { return altoLente; }
+    public void setAltoLente(Integer altoLente) { this.altoLente = altoLente; }
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
 }

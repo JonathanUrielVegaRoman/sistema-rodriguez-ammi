@@ -46,8 +46,38 @@ public class Venta {
     @Column(name = "paga_con", precision = 10, scale = 2)
     private BigDecimal pagaCon;
 
+    /**
+     * Referencia del pago cuando NO es efectivo: la clave de rastreo de la transferencia (SPEI)
+     * o el número de autorización del voucher de la terminal. Sirve para aclarar un pago
+     * comparándolo con el estado de cuenta del banco.
+     */
+    @Column(name = "referencia_pago", length = 60)
+    private String referenciaPago;
+
+    /**
+     * CLAVE ÚNICA que genera el celular para cada intento de cobro. Si el Wi-Fi falla y el
+     * celular manda el mismo cobro dos veces, la segunda vez encontramos esta clave y devolvemos
+     * el ticket que ya existía, en lugar de cobrar doble. (A esto se le llama "idempotencia".)
+     */
+    @Column(name = "clave_unica", unique = true, length = 40)
+    private String claveUnica;
+
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DetalleVenta> detalles = new ArrayList<>();
+
+    /**
+     * Venta CANCELADA (devolución o error al cobrar). No se borra: queda registrada con su
+     * motivo, pero ya no cuenta en los reportes y la mercancía regresó al inventario.
+     * Solo el administrador puede cancelar (ver admin/AdminVentasController).
+     */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean cancelada;
+
+    @Column(name = "motivo_cancelacion", length = 200)
+    private String motivoCancelacion;
+
+    @Column(name = "fecha_cancelacion")
+    private LocalDateTime fechaCancelacion;
 
     protected Venta() {
     }
@@ -65,6 +95,12 @@ public class Venta {
         total = total.add(detalle.getImporte());
     }
 
+    public void cancelar(String motivo) {
+        this.cancelada = true;
+        this.motivoCancelacion = motivo;
+        this.fechaCancelacion = LocalDateTime.now();
+    }
+
     public BigDecimal getCambio() {
         if (pagaCon == null) {
             return BigDecimal.ZERO;
@@ -78,4 +114,11 @@ public class Venta {
     public BigDecimal getTotal() { return total; }
     public BigDecimal getPagaCon() { return pagaCon; }
     public List<DetalleVenta> getDetalles() { return detalles; }
+    public String getReferenciaPago() { return referenciaPago; }
+    public void setReferenciaPago(String referenciaPago) { this.referenciaPago = referenciaPago; }
+    public String getClaveUnica() { return claveUnica; }
+    public void setClaveUnica(String claveUnica) { this.claveUnica = claveUnica; }
+    public boolean isCancelada() { return cancelada; }
+    public String getMotivoCancelacion() { return motivoCancelacion; }
+    public LocalDateTime getFechaCancelacion() { return fechaCancelacion; }
 }

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
-import { impresionesApi } from "../../services/api"
+import { impresionesApi, ventasApi } from "../../services/api"
+import BotonImprimir from "../../components/BotonImprimir"
+import CampoReferencia from "../../components/CampoReferencia"
 import { fechaHora, NOMBRES_PAGO } from "../../utils/formato"
 import { ir } from "../../hooks/useRuta"
 import Ticket from "../../components/Ticket"
@@ -50,7 +52,7 @@ export default function Impresiones() {
         <p className="alerta alerta--exito">Cobrado. Los archivos del cliente se borraron.</p>
         <Ticket ticket={ticket} />
         <div className="acciones">
-          <button className="btn btn--primario" onClick={() => window.print()}>Imprimir ticket</button>
+          <BotonImprimir mandar={() => ventasApi.imprimir(ticket.folio)} texto="Imprimir ticket" />
           <button className="btn btn--contorno" onClick={() => setTicket(null)}>Volver a la cola</button>
         </div>
       </section>
@@ -82,10 +84,11 @@ export default function Impresiones() {
 function TarjetaTurno({ t, accion, alCobrar }) {
   const [hojas, setHojas] = useState(t.hojas ?? "")
   const [metodo, setMetodo] = useState("EFECTIVO")
+  const [referencia, setReferencia] = useState("")
   const [imprimiendo, setImprimiendo] = useState(null) // archivo abierto en la ventana de impresión
 
   async function cobrar() {
-    const ticket = await accion(impresionesApi.cobrar(t.id, metodo, null))
+    const ticket = await accion(impresionesApi.cobrar(t.id, metodo, null, metodo !== "EFECTIVO" ? referencia.trim() || null : null))
     if (ticket) alCobrar(ticket)
   }
 
@@ -148,6 +151,7 @@ function TarjetaTurno({ t, accion, alCobrar }) {
               </button>
             ))}
           </div>
+          <CampoReferencia metodo={metodo} valor={referencia} alCambiar={setReferencia} />
           <button className="btn btn--verde btn--bloque" onClick={cobrar}>Cobrar y entregar</button>
         </>
       )}

@@ -93,3 +93,4 @@ sistema-rodriguez-ammi/
 5. [Glosario y preguntas de entrevista](docs/05-glosario-y-entrevista.md)
 6. [Ideas, pendientes y decisiones](docs/06-ideas-y-pendientes.md)
 7. [Cómo se usa (guía para la familia) y decisiones de diseño](docs/07-como-se-usa.md)
+8. [Calidad: qué se revisó, qué fallas se encontraron y cómo se comprueba](docs/08-calidad-y-pruebas.md)

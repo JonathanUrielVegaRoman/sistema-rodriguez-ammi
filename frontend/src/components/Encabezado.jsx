@@ -27,6 +27,7 @@ const SECCIONES = {
   ],
   admin: [
     ["/admin", "Reportes"],
+    ["/admin/tickets", "Tickets"],
     ["/admin/ajustes", "Ajustes"],
   ],
 }

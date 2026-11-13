@@ -92,6 +92,13 @@ public class ArmazonService {
         buscarEntidad(id).setActivo(false);
     }
 
+    /** Con candado: úsalo antes de cambiar la existencia (al crear o cancelar una orden). */
+    @Transactional
+    public Armazon bloquearEntidad(Long id) {
+        return repositorio.bloquearPorId(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe el armazón con id " + id));
+    }
+
     public Armazon buscarEntidad(Long id) {
         return repositorio.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("No existe el armazón con id " + id));
@@ -110,6 +117,9 @@ public class ArmazonService {
         a.setPrecio(d.precio());
         a.setExistencia(d.existencia());
         a.setUbicacion(d.ubicacion());
+        a.setForma(d.forma());
+        a.setColorHex(d.colorHex() == null || d.colorHex().isBlank() ? null : d.colorHex().toLowerCase(Locale.ROOT));
+        a.setAltoLente(d.altoLente());
     }
 
     private boolean contiene(Armazon a, String t) {

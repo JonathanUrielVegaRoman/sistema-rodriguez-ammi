@@ -57,6 +57,16 @@ public class ReporteController {
                 .body(excel.generar(inicio, fin));
     }
 
+    /** Excel con las existencias y el valor del inventario de los dos negocios. */
+    @GetMapping("/api/admin/reportes/inventario-excel")
+    public ResponseEntity<byte[]> inventarioExcel() {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("inventario-" + LocalDate.now() + ".xlsx").build().toString())
+                .cacheControl(CacheControl.noStore())
+                .body(excel.inventario());
+    }
+
     @GetMapping("/api/admin/reportes/corte")
     public VentaDto.CorteDelDia corte(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dia) {

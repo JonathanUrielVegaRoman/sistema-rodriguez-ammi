@@ -35,13 +35,27 @@ public class PagoOrden {
     @Column(name = "metodo_pago", nullable = false, length = 20)
     private MetodoPago metodoPago;
 
+    /** Clave de rastreo de la transferencia o autorización de la terminal (opcional). */
+    @Column(length = 60)
+    private String referencia;
+
+    /** Para no registrar dos veces el mismo abono si el celular reintenta (ver Venta.claveUnica). */
+    @Column(name = "clave_unica", unique = true, length = 40)
+    private String claveUnica;
+
     protected PagoOrden() {
     }
 
     public PagoOrden(BigDecimal monto, MetodoPago metodoPago) {
+        this(monto, metodoPago, null, null);
+    }
+
+    public PagoOrden(BigDecimal monto, MetodoPago metodoPago, String referencia, String claveUnica) {
         this.fecha = LocalDateTime.now();
         this.monto = monto;
         this.metodoPago = metodoPago;
+        this.referencia = referencia;
+        this.claveUnica = claveUnica;
     }
 
     void setOrden(OrdenLentes orden) { this.orden = orden; }
@@ -51,4 +65,5 @@ public class PagoOrden {
     public LocalDateTime getFecha() { return fecha; }
     public BigDecimal getMonto() { return monto; }
     public MetodoPago getMetodoPago() { return metodoPago; }
+    public String getReferencia() { return referencia; }
 }

@@ -49,6 +49,14 @@ public class ImpresionService {
     public static final String CODIGO_COLOR = "SRV-IMP-COLOR";
 
     private static final int MAX_ARCHIVOS = 5;
+    /** Protección del buzón (es público): turnos abiertos en total y envíos por dispositivo. */
+    private static final int MAX_TURNOS_ABIERTOS = 40;
+    private static final int MAX_ENVIOS_POR_DISPOSITIVO = 6;
+    private static final long VENTANA_ENVIOS_MS = 10 * 60 * 1000L;
+    private static final Set<String> IMAGENES = Set.of("jpg", "jpeg", "png");
+
+    /** Horas de los últimos envíos de cada dispositivo (por dirección IP). Vive en memoria. */
+    private final java.util.Map<String, java.util.Deque<Long>> enviosPorIp = new java.util.concurrent.ConcurrentHashMap<>();
     private static final Set<String> PERMITIDOS = Set.of("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
             "jpg", "jpeg", "png", "txt");
 
@@ -102,9 +110,24 @@ public class ImpresionService {
     // ---------------- Lado del cliente (público) ----------------
 
     @Transactional
-    public Recibido recibir(List<MultipartFile> subidos, int copias, boolean color, boolean dobleCara, String notas) {
+    public Recibido recibir(List<MultipartFile> subidos, int copias, boolean color, boolean dobleCara, String notas, String ip) {
         if (subidos == null || subidos.isEmpty()) {
             throw new ReglaDeNegocioException("Elige al menos un archivo");
+        }
+        // El buzón es la única puerta abierta a cualquiera: se limita para que nadie lo sature
+        // (por descuido o a propósito) y llene el disco de la computadora.
+        if (trabajos.countByEstadoIn(EnumSet.of(EstadoImpresion.PENDIENTE, EstadoImpresion.IMPRESO)) >= MAX_TURNOS_ABIERTOS) {
+            throw new ReglaDeNegocioException("Hay muchos turnos en espera. Avisa en el mostrador, por favor.");
+        }
+        exigirRitmoRazonable(ip);
+        for (MultipartFile f : subidos) {
+            if (IMAGENES.contains(AlmacenArchivos.extension(f.getOriginalFilename()))) {
+                try (java.io.InputStream datos = f.getInputStream()) {
+                    ImpresoraService.validarImagen(datos, f.getOriginalFilename());
+                } catch (java.io.IOException e) {
+                    throw new ReglaDeNegocioException("No se pudo leer " + f.getOriginalFilename());
+                }
+            }
         }
         if (subidos.size() > MAX_ARCHIVOS) {
             throw new ReglaDeNegocioException("Máximo " + MAX_ARCHIVOS + " archivos por turno");
@@ -125,6 +148,24 @@ public class ImpresionService {
         }
         trabajos.save(trabajo);
         return new Recibido(turno, trabajo.getCodigoSeguimiento());
+    }
+
+    /** Máximo 6 envíos cada 10 minutos por dispositivo. */
+    private void exigirRitmoRazonable(String ip) {
+        if (ip == null) {
+            return;
+        }
+        long ahora = System.currentTimeMillis();
+        java.util.Deque<Long> envios = enviosPorIp.computeIfAbsent(ip, k -> new java.util.ArrayDeque<>());
+        synchronized (envios) {
+            while (!envios.isEmpty() && ahora - envios.peekFirst() > VENTANA_ENVIOS_MS) {
+                envios.pollFirst();
+            }
+            if (envios.size() >= MAX_ENVIOS_POR_DISPOSITIVO) {
+                throw new ReglaDeNegocioException("Ya mandaste varios archivos. Espera unos minutos o pide ayuda en el mostrador.");
+            }
+            envios.addLast(ahora);
+        }
     }
 
     public EstadoPublico consultar(String codigo) {
@@ -192,7 +233,7 @@ public class ImpresionService {
 
     /** Cobra las hojas como una venta normal de papelería, entrega y borra los archivos. */
     @Transactional
-    public VentaDto.Ticket cobrar(Long id, MetodoPago metodo, java.math.BigDecimal pagaCon) {
+    public VentaDto.Ticket cobrar(Long id, MetodoPago metodo, java.math.BigDecimal pagaCon, String referencia) {
         TrabajoImpresion t = buscar(id);
         exigirAbierto(t);
         if (t.getHojas() == null) {
@@ -203,7 +244,7 @@ public class ImpresionService {
                 .orElseThrow(() -> new ReglaDeNegocioException("Falta el producto de servicio " + codigo + " en el inventario"));
 
         VentaDto.Ticket ticket = ventas.registrar(new VentaDto.Nueva(metodo, pagaCon,
-                List.of(new VentaDto.Renglon(servicio.getId(), t.getHojas()))));
+                List.of(new VentaDto.Renglon(servicio.getId(), t.getHojas())), referencia, null));
         t.setVentaFolio(ticket.folio());
         t.setEstado(EstadoImpresion.ENTREGADO);
         borrarArchivos(t);

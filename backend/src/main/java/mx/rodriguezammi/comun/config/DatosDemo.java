@@ -2,6 +2,7 @@ package mx.rodriguezammi.comun.config;
 
 import mx.rodriguezammi.optica.armazon.Armazon;
 import mx.rodriguezammi.optica.armazon.ArmazonRepository;
+import mx.rodriguezammi.optica.armazon.FormaArmazon;
 import mx.rodriguezammi.optica.cliente.Cliente;
 import mx.rodriguezammi.optica.cliente.ClienteRepository;
 import mx.rodriguezammi.optica.receta.Receta;
@@ -49,11 +50,11 @@ public class DatosDemo {
             }
             if (armazones.count() == 0) {
                 armazones.saveAll(List.of(
-                        armazon("RB-2140", "Ray-Ban", "Wayfarer", "Negro", 52, 18, 140, "2450.00", 2, "Vitrina 1"),
-                        armazon("RB-2140-M", "Ray-Ban", "Wayfarer", "Negro", 50, 22, 150, "2450.00", 1, "Vitrina 1"),
-                        armazon("OK-101", "Genérico", "Clásico", "Carey", 54, 17, 145, "980.00", 3, "Vitrina 2"),
-                        armazon("INF-07", "Infantil", "Osito", "Azul", 44, 16, 125, "650.00", 4, "Charola niños"),
-                        armazon("TR-330", "Titanio", "Ligero", "Plata", 52, 19, 140, "1850.00", 0, "Vitrina 2")
+                        armazon("RB-2140", "Ray-Ban", "Wayfarer", "Negro", 52, 18, 140, "2450.00", 2, "Vitrina 1", FormaArmazon.CUADRADO, "#1b1b1b"),
+                        armazon("RB-2140-M", "Ray-Ban", "Wayfarer", "Negro", 50, 22, 150, "2450.00", 1, "Vitrina 1", FormaArmazon.CUADRADO, "#1b1b1b"),
+                        armazon("OK-101", "Genérico", "Clásico", "Carey", 54, 17, 145, "980.00", 3, "Vitrina 2", FormaArmazon.RECTANGULAR, "#7a4a21"),
+                        armazon("INF-07", "Infantil", "Osito", "Azul", 44, 16, 125, "650.00", 4, "Charola niños", FormaArmazon.REDONDO, "#1f5fbf"),
+                        armazon("TR-330", "Titanio", "Ligero", "Plata", 52, 19, 140, "1850.00", 0, "Vitrina 2", FormaArmazon.AVIADOR, "#b9bcc2")
                 ));
             }
             if (clientes.count() == 0) {
@@ -83,7 +84,7 @@ public class DatosDemo {
     }
 
     private Armazon armazon(String codigo, String marca, String modelo, String color, int ancho, int puente,
-                            int varilla, String precio, int existencia, String ubicacion) {
+                            int varilla, String precio, int existencia, String ubicacion, FormaArmazon forma, String colorHex) {
         Armazon a = new Armazon(codigo, marca, modelo, new BigDecimal(precio));
         a.setColor(color);
         a.setAnchoLente(ancho);
@@ -91,6 +92,8 @@ public class DatosDemo {
         a.setVarilla(varilla);
         a.setExistencia(existencia);
         a.setUbicacion(ubicacion);
+        a.setForma(forma);
+        a.setColorHex(colorHex);
         return a;
     }
 }

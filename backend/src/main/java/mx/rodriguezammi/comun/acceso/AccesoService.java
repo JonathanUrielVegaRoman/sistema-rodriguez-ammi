@@ -1,5 +1,6 @@
 package mx.rodriguezammi.comun.acceso;
 
+import mx.rodriguezammi.comun.ajustes.AjustesService;
 import mx.rodriguezammi.comun.exception.ReglaDeNegocioException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ public class AccesoService {
     private static final int MINUTOS_BLOQUEO = 5;
 
     private final SesionAccesoRepository sesiones;
+    private final AjustesService ajustes;
     private final String pinPersonal;
     private final String passwordAdmin;
     private final int horasAdmin;
@@ -46,11 +48,12 @@ public class AccesoService {
     /** Intentos fallidos por dirección IP (en memoria; se reinicia al apagar el servidor). */
     private final Map<String, Intentos> fallidos = new ConcurrentHashMap<>();
 
-    public AccesoService(SesionAccesoRepository sesiones,
+    public AccesoService(SesionAccesoRepository sesiones, AjustesService ajustes,
                          @Value("${app.acceso.pin}") String pinPersonal,
                          @Value("${app.acceso.admin-password}") String passwordAdmin,
                          @Value("${app.acceso.horas-admin:8}") int horasAdmin) {
         this.sesiones = sesiones;
+        this.ajustes = ajustes;
         this.pinPersonal = pinPersonal;
         this.passwordAdmin = passwordAdmin;
         this.horasAdmin = horasAdmin;
@@ -73,9 +76,34 @@ public class AccesoService {
         return crear(Rol.ADMIN, LocalDateTime.now().plusHours(horasAdmin), dispositivo);
     }
 
-    /** ¿Este token es válido y tiene (al menos) el rol pedido? */
+    /**
+     * ¿Este token es válido y tiene el rol pedido?
+     * Además aplica el BLOQUEO POR INACTIVIDAD: si el dispositivo lleva más de los minutos
+     * configurados sin usarse, el pase se borra y hay que escribir el PIN (o la contraseña) otra vez.
+     * Si sigue activo, se anota que se acaba de usar.
+     */
+    @Transactional
     public boolean tieneRol(String token, Rol rol) {
-        return buscarVigente(token).map(s -> s.getRol() == rol).orElse(false);
+        Optional<SesionAcceso> sesion = buscarVigente(token);
+        if (sesion.isEmpty() || sesion.get().getRol() != rol) {
+            return false;
+        }
+        SesionAcceso s = sesion.get();
+        if (s.inactivaPorMasDe(ajustes.minutosInactividad())) {
+            sesiones.delete(s);
+            return false;
+        }
+        s.tocar();
+        return true;
+    }
+
+    /** ¿Siguen el PIN o la contraseña de ejemplo? (Ajustes le muestra una advertencia al dueño) */
+    public boolean usaClavesDeEjemplo() {
+        return "1234".equals(pinPersonal) || "admin123".equals(passwordAdmin);
+    }
+
+    public int minutosInactividad() {
+        return ajustes.minutosInactividad();
     }
 
     public Optional<SesionAcceso> buscarVigente(String token) {
@@ -87,6 +115,7 @@ public class AccesoService {
 
     @Transactional
     public void salir(String token) {
+        // (sirve para el pase de admin y para el del personal cuando la pantalla se bloquea)
         if (token != null) {
             sesiones.deleteById(token);
         }

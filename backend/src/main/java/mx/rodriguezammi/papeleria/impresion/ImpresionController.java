@@ -3,6 +3,7 @@ package mx.rodriguezammi.papeleria.impresion;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import mx.rodriguezammi.papeleria.venta.MetodoPago;
 import mx.rodriguezammi.papeleria.venta.VentaDto;
 import org.springframework.core.io.FileSystemResource;
@@ -45,7 +46,7 @@ public class ImpresionController {
     public record Impreso(@Min(1) int hojas) {
     }
 
-    public record Cobro(@NotNull MetodoPago metodoPago, BigDecimal pagaCon) {
+    public record Cobro(@NotNull MetodoPago metodoPago, BigDecimal pagaCon, @Size(max = 60) String referencia) {
     }
 
     // ---------- Público ----------
@@ -56,8 +57,9 @@ public class ImpresionController {
                                            @RequestParam(defaultValue = "1") int copias,
                                            @RequestParam(defaultValue = "false") boolean color,
                                            @RequestParam(defaultValue = "false") boolean dobleCara,
-                                           @RequestParam(required = false) String notas) {
-        return servicio.recibir(archivos, copias, color, dobleCara, notas);
+                                           @RequestParam(required = false) String notas,
+                                           jakarta.servlet.http.HttpServletRequest peticion) {
+        return servicio.recibir(archivos, copias, color, dobleCara, notas, peticion.getRemoteAddr());
     }
 
     @GetMapping("/api/publico/impresiones/{codigo}")
@@ -116,7 +118,7 @@ public class ImpresionController {
 
     @PostMapping("/api/papeleria/impresiones/{id}/cobrar")
     public VentaDto.Ticket cobrar(@PathVariable Long id, @Valid @RequestBody Cobro datos) {
-        return servicio.cobrar(id, datos.metodoPago(), datos.pagaCon());
+        return servicio.cobrar(id, datos.metodoPago(), datos.pagaCon(), datos.referencia());
     }
 
     @PostMapping("/api/papeleria/impresiones/{id}/cancelar")

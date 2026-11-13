@@ -60,7 +60,25 @@ public class OrdenService {
 
     @Transactional
     public OrdenDto.Detalle crear(OrdenDto.Nueva datos) {
+        // ¿Reintento de la misma orden? (el celular la mandó dos veces por mala señal)
+        String clave = vacioANull(datos.claveUnica());
+        if (clave != null) {
+            Optional<OrdenLentes> yaCreada = ordenes.findByClaveUnica(clave);
+            if (yaCreada.isPresent()) {
+                return OrdenDto.Detalle.desde(yaCreada.get());
+            }
+        }
+
+        // CANDADOS antes de validar: armazones (en orden de id) y cupón. Así dos órdenes simultáneas
+        // no pueden llevarse el mismo armazón ni usar el mismo cupón.
+        datos.partidas().stream().map(OrdenDto.Partida::armazonId).filter(Objects::nonNull).distinct().sorted()
+                .forEach(armazones::bloquearEntidad);
+        if (vacioANull(datos.codigoCupon()) != null) {
+            cupones.bloquear(datos.codigoCupon());
+        }
+
         OrdenLentes orden = armar(datos);
+        orden.setClaveUnica(clave);
 
         // Efectos: descontar armazones del inventario.
         for (PartidaLente p : orden.getPartidas()) {
@@ -81,7 +99,7 @@ public class OrdenService {
             if (datos.metodoPagoAnticipo() == null) {
                 throw new ReglaDeNegocioException("Indica cómo pagó el anticipo");
             }
-            orden.agregarPago(new PagoOrden(anticipo, datos.metodoPagoAnticipo()));
+            orden.agregarPago(new PagoOrden(anticipo, datos.metodoPagoAnticipo(), vacioANull(datos.referenciaAnticipo()), null));
         }
 
         OrdenLentes guardada = ordenes.save(orden);
@@ -108,20 +126,27 @@ public class OrdenService {
 
     @Transactional
     public OrdenDto.Detalle abonar(Long folio, OrdenDto.Abono abono) {
-        OrdenLentes orden = buscarEntidad(folio);
+        String clave = vacioANull(abono.claveUnica());
+        if (clave != null) {
+            Optional<PagoOrden> yaRegistrado = ordenes.pagoPorClave(clave);
+            if (yaRegistrado.isPresent()) {
+                return OrdenDto.Detalle.desde(yaRegistrado.get().getOrden());
+            }
+        }
+        OrdenLentes orden = bloquearEntidad(folio);
         if (orden.getEstado() == EstadoOrden.CANCELADA) {
             throw new ReglaDeNegocioException("La orden está cancelada");
         }
         if (abono.monto().compareTo(orden.getSaldo()) > 0) {
             throw new ReglaDeNegocioException("El abono es mayor al saldo ($" + orden.getSaldo() + ")");
         }
-        orden.agregarPago(new PagoOrden(abono.monto(), abono.metodoPago()));
+        orden.agregarPago(new PagoOrden(abono.monto(), abono.metodoPago(), vacioANull(abono.referencia()), clave));
         return OrdenDto.Detalle.desde(orden);
     }
 
     @Transactional
     public OrdenDto.Detalle cambiarEstado(Long folio, EstadoOrden nuevo) {
-        OrdenLentes orden = buscarEntidad(folio);
+        OrdenLentes orden = bloquearEntidad(folio);
         EstadoOrden actual = orden.getEstado();
 
         if (actual == EstadoOrden.ENTREGADA || actual == EstadoOrden.CANCELADA) {
@@ -132,11 +157,22 @@ public class OrdenService {
         }
         if (nuevo == EstadoOrden.CANCELADA) {
             // Los armazones regresan a la vitrina. Los pagos se quedan registrados (la devolución se hace aparte).
+            // Candado a cada armazón (en orden de id) y luego se regresa una pieza por cada par.
+            Map<Long, Armazon> bloqueados = new HashMap<>();
             orden.getPartidas().stream().map(PartidaLente::getArmazon).filter(Objects::nonNull)
+                    .map(Armazon::getId).distinct().sorted()
+                    .forEach(id -> bloqueados.put(id, armazones.bloquearEntidad(id)));
+            orden.getPartidas().stream().map(PartidaLente::getArmazon).filter(Objects::nonNull)
+                    .map(a -> bloqueados.get(a.getId()))
                     .forEach(a -> a.setExistencia(a.getExistencia() + 1));
         }
         orden.setEstado(nuevo);
         return OrdenDto.Detalle.desde(orden);
+    }
+
+    private OrdenLentes bloquearEntidad(Long folio) {
+        return ordenes.bloquearPorId(folio)
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe la orden con folio " + folio));
     }
 
     public OrdenLentes buscarEntidad(Long folio) {

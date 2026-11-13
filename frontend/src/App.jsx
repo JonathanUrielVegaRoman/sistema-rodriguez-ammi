@@ -11,8 +11,9 @@
   - #/admin...    → pide la contraseña del DUEÑO (reportes de ventas, precios, cupones).
   - todo lo demás → pide el PIN del PERSONAL una sola vez por celular.
 */
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import useRuta, { coincide } from "./hooks/useRuta"
+import useInactividad, { marcarActividad } from "./hooks/useInactividad"
 import { sesion, EVENTO_SIN_ACCESO } from "./services/sesion"
 import { accesoApi, cerrarSesionAdmin } from "./services/api"
 import Encabezado from "./components/Encabezado"
@@ -32,6 +33,7 @@ import OrdenDetalle from "./vistas/optica/OrdenDetalle"
 import Cumpleanos from "./vistas/optica/Cumpleanos"
 import Reportes from "./vistas/admin/Reportes"
 import Ajustes from "./vistas/admin/Ajustes"
+import Tickets from "./vistas/admin/Tickets"
 
 /*
   TABLA DE RUTAS: dirección → pantalla. El orden importa: "/optica/ordenes/nueva" va antes
@@ -51,12 +53,15 @@ const RUTAS = [
   ["/optica/ordenes/:folio", OrdenDetalle],
   ["/optica/cumpleanos", Cumpleanos],
   ["/admin", Reportes],
+  ["/admin/tickets", Tickets],
   ["/admin/ajustes", Ajustes],
 ]
 
 export default function App() {
   const { ruta, consulta } = useRuta()
   const [conAcceso, setConAcceso] = useState(Boolean(sesion.personal()))
+  const [minutosInactividad, setMinutosInactividad] = useState(10)
+  const [bloqueadoPorInactividad, setBloqueadoPorInactividad] = useState(false)
 
   // Al abrir: confirmar con el servidor que el pase sigue vigente.
   useEffect(() => {
@@ -64,6 +69,7 @@ export default function App() {
     accesoApi
       .estado()
       .then((e) => {
+        setMinutosInactividad(e.minutosInactividad)
         if (!e.personal && !e.admin) {
           sesion.olvidarPersonal()
           setConAcceso(false)
@@ -85,10 +91,32 @@ export default function App() {
     if (!ruta.startsWith("/admin") && sesion.admin()) cerrarSesionAdmin()
   }, [ruta])
 
+  // Bloqueo por inactividad: tras N minutos sin tocar la pantalla, se vuelve a pedir el PIN.
+  // (N lo decide el dueño en Administración → Ajustes; por defecto 10.)
+  const bloquear = useCallback(async () => {
+    await accesoApi.bloquear().catch(() => {})
+    await cerrarSesionAdmin()
+    sesion.olvidarPersonal()
+    setBloqueadoPorInactividad(true)
+    setConAcceso(false)
+  }, [])
+  useInactividad({ activo: conAcceso && ruta !== "/imprimir", minutos: minutosInactividad, alBloquear: bloquear })
+
   // Puerta pública: el buzón de impresión para clientes, sin menú del sistema.
   if (ruta === "/imprimir") return <Imprimir />
 
-  if (!conAcceso) return <Acceso alEntrar={() => setConAcceso(true)} />
+  if (!conAcceso)
+    return (
+      <Acceso
+        porInactividad={bloqueadoPorInactividad}
+        alEntrar={(minutos) => {
+          marcarActividad()
+          if (minutos) setMinutosInactividad(minutos)
+          setBloqueadoPorInactividad(false)
+          setConAcceso(true)
+        }}
+      />
+    )
 
   let Vista = null
   let parametros = {}

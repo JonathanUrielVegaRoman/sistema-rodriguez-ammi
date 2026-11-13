@@ -5,6 +5,8 @@ import { dinero, fechaCorta, NOMBRES_MICA, NOMBRES_PAGO } from "../../utils/form
 import CuadriculaArmazones from "../../components/CuadriculaArmazones"
 import TablaReceta from "../../components/TablaReceta"
 import Modal from "../../components/Modal"
+import CampoReferencia from "../../components/CampoReferencia"
+import { nuevaClave } from "../../utils/clave"
 import Icono from "../../components/Icono"
 
 /*
@@ -48,6 +50,7 @@ export default function NuevaOrden({ consulta }) {
   const [anticipo, setAnticipo] = useState("")
   const [metodo, setMetodo] = useState("EFECTIVO")
   const [notas, setNotas] = useState("")
+  const [referenciaAnticipo, setReferenciaAnticipo] = useState("")
   const [cotizacion, setCotizacion] = useState(null)
   const [errorCotizacion, setErrorCotizacion] = useState("")
   const [error, setError] = useState("")
@@ -97,8 +100,13 @@ export default function NuevaOrden({ consulta }) {
       anticipo: anticipo ? Number(anticipo) : 0,
       metodoPagoAnticipo: anticipo ? metodo : null,
       notas: notas || null,
+      referenciaAnticipo: anticipo && metodo !== "EFECTIVO" ? referenciaAnticipo.trim() || null : null,
     }
-  }, [cliente, recetaId, pares, codigoCupon, descuentoManual, motivoDescuento, fechaEntrega, anticipo, metodo, notas])
+  }, [cliente, recetaId, pares, codigoCupon, descuentoManual, motivoDescuento, fechaEntrega, anticipo, metodo, notas, referenciaAnticipo])
+
+  // Clave única de esta orden (ver utils/clave.js): si se toca "Crear orden" dos veces con los
+  // mismos datos por mala señal, el servidor crea una sola.
+  const claveOrden = useMemo(() => nuevaClave(), [solicitud])
 
   // Cotizar 400 ms después del último cambio.
   useEffect(() => {
@@ -125,7 +133,7 @@ export default function NuevaOrden({ consulta }) {
     setError("")
     setGuardando(true)
     try {
-      const orden = await ordenesApi.crear(solicitud)
+      const orden = await ordenesApi.crear({ ...solicitud, claveUnica: claveOrden })
       ir(`/optica/ordenes/${orden.folio}`)
     } catch (e) {
       setError(e.message)
@@ -321,6 +329,7 @@ export default function NuevaOrden({ consulta }) {
                   ))}
                 </div>
               )}
+              {Number(anticipo) > 0 && <CampoReferencia metodo={metodo} valor={referenciaAnticipo} alCambiar={setReferenciaAnticipo} />}
               <label className="campo">
                 <span className="etiqueta">Notas para el laboratorio o la entrega</span>
                 <input className="entrada" value={notas} onChange={(e) => setNotas(e.target.value)} />

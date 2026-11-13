@@ -4,9 +4,12 @@ import { createRoot } from "react-dom/client"
 import "./styles/base.css" // colores, botones y formularios (los mismos del proyecto de sedimento urinario)
 import "./styles/app.css" // estructura propia de este sistema + estilo del ticket impreso
 import App from "./App.jsx"
+import ErrorBoundary from "./components/ErrorBoundary.jsx"
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 )

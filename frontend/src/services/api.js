@@ -116,7 +116,9 @@ export const accesoApi = {
   personal: (clave) => peticion("/publico/acceso/personal", { metodo: "POST", cuerpo: { clave } }),
   admin: (clave) => peticion("/publico/acceso/admin", { metodo: "POST", cuerpo: { clave } }),
   salirAdmin: () => peticion("/publico/acceso/salir", { metodo: "POST" }),
+  bloquear: () => peticion("/publico/acceso/bloquear", { metodo: "POST" }),
   cerrarPersonal: () => peticion("/admin/acceso/cerrar-personal", { metodo: "POST" }),
+  clavesDeEjemplo: () => peticion("/admin/acceso/claves-de-ejemplo"),
   info: () => peticion("/publico/info"),
 }
 
@@ -135,11 +137,14 @@ export const productosApi = {
   actualizar: (id, producto) => peticion(`/papeleria/productos/${id}`, { metodo: "PUT", cuerpo: producto }),
   resurtir: (id, cantidad) => peticion(`/papeleria/productos/${id}/resurtir`, { metodo: "POST", cuerpo: { cantidad } }),
   desactivar: (id) => peticion(`/papeleria/productos/${id}`, { metodo: "DELETE" }),
+  movimientos: (id) => peticion(`/papeleria/productos/${id}/movimientos`),
 }
 
 export const ventasApi = {
   registrar: (venta) => peticion("/papeleria/ventas", { metodo: "POST", cuerpo: venta }),
   ticket: (folio) => peticion(`/papeleria/ventas/${folio}`),
+  /** Manda el ticket a la impresora de tickets. Responde { impreso: false } si no hay una configurada. */
+  imprimir: (folio) => peticion(`/papeleria/ventas/${folio}/imprimir`, { metodo: "POST" }),
 }
 
 export const impresionesApi = {
@@ -158,7 +163,7 @@ export const impresionesApi = {
   },
   imprimir: (id, archivoId, opciones) => peticion(`/papeleria/impresiones/${id}/archivos/${archivoId}/imprimir`, { metodo: "POST", cuerpo: opciones }),
   impreso: (id, hojas) => peticion(`/papeleria/impresiones/${id}/impreso`, { metodo: "POST", cuerpo: { hojas } }),
-  cobrar: (id, metodoPago, pagaCon) => peticion(`/papeleria/impresiones/${id}/cobrar`, { metodo: "POST", cuerpo: { metodoPago, pagaCon } }),
+  cobrar: (id, metodoPago, pagaCon, referencia) => peticion(`/papeleria/impresiones/${id}/cobrar`, { metodo: "POST", cuerpo: { metodoPago, pagaCon, referencia } }),
   cancelar: (id) => peticion(`/papeleria/impresiones/${id}/cancelar`, { metodo: "POST" }),
 }
 
@@ -171,6 +176,7 @@ export const clientesApi = {
   actualizar: (id, c) => peticion(`/optica/clientes/${id}`, { metodo: "PUT", cuerpo: c }),
   eliminar: (id) => peticion(`/optica/clientes/${id}`, { metodo: "DELETE" }),
   restaurar: (id) => peticion(`/optica/clientes/${id}/restaurar`, { metodo: "POST" }),
+  eliminarVarios: (ids) => peticion("/optica/clientes/eliminar", { metodo: "POST", cuerpo: { ids } }),
   recetas: (id) => peticion(`/optica/clientes/${id}/recetas`),
   crearReceta: (id, r) => peticion(`/optica/clientes/${id}/recetas`, { metodo: "POST", cuerpo: r }),
   ordenes: (id) => peticion(`/optica/clientes/${id}/ordenes`),
@@ -194,8 +200,9 @@ export const ordenesApi = {
   obtener: (folio) => peticion(`/optica/ordenes/${folio}`),
   cotizar: (o) => peticion("/optica/ordenes/cotizar", { metodo: "POST", cuerpo: o }),
   crear: (o) => peticion("/optica/ordenes", { metodo: "POST", cuerpo: o }),
-  abonar: (folio, monto, metodoPago) => peticion(`/optica/ordenes/${folio}/abonos`, { metodo: "POST", cuerpo: { monto, metodoPago } }),
+  abonar: (folio, abono) => peticion(`/optica/ordenes/${folio}/abonos`, { metodo: "POST", cuerpo: abono }),
   estado: (folio, estado) => peticion(`/optica/ordenes/${folio}/estado`, { metodo: "PUT", cuerpo: { estado } }),
+  imprimir: (folio) => peticion(`/optica/ordenes/${folio}/imprimir`, { metodo: "POST" }),
 }
 
 export const tratamientosApi = {
@@ -219,4 +226,23 @@ export const reportesApi = {
   corte: (dia) => peticion("/admin/reportes/corte" + consulta({ dia })),
   /** Sin fechas = todo el historial. */
   excel: (desde, hasta) => descargar("/admin/reportes/excel" + consulta({ desde, hasta }), "ventas.xlsx"),
+  inventarioExcel: () => descargar("/admin/reportes/inventario-excel", "inventario.xlsx"),
+}
+
+export const adminApi = {
+  ventasDelDia: (dia) => peticion("/admin/ventas" + consulta({ dia })),
+  cancelarVenta: (folio, motivo) => peticion(`/admin/ventas/${folio}/cancelar`, { metodo: "POST", cuerpo: { motivo } }),
+  ajustes: () => peticion("/admin/ajustes"),
+  guardarAjustes: (a) => peticion("/admin/ajustes", { metodo: "PUT", cuerpo: a }),
+}
+
+/**
+ * Imprime un ticket: primero intenta mandarlo directo a la impresora de tickets (backend).
+ * Si no hay una configurada, usa la impresión del navegador (Ctrl+P) como respaldo.
+ *   await imprimirTicket(() => ventasApi.imprimir(folio))
+ */
+export async function imprimirTicket(mandar) {
+  const r = await mandar()
+  if (!r?.impreso) window.print()
+  return r
 }

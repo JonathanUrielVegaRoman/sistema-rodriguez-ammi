@@ -17,6 +17,9 @@ public interface TrabajoImpresionRepository extends JpaRepository<TrabajoImpresi
     /** Cuántos llegaron hoy (para numerar el siguiente turno). */
     long countByFechaAfter(LocalDateTime desde);
 
+    /** Cuántos turnos siguen abiertos (para no aceptar más de los que se pueden atender). */
+    long countByEstadoIn(Collection<EstadoImpresion> estados);
+
     /** Trabajos que todavía tienen archivos en disco y son más viejos que cierta fecha. */
     List<TrabajoImpresion> findByArchivosBorradosFalseAndFechaBefore(LocalDateTime limite);
 }

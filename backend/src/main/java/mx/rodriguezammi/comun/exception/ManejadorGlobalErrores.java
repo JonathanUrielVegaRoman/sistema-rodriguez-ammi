@@ -3,6 +3,8 @@ package mx.rodriguezammi.comun.exception;
 import mx.rodriguezammi.comun.acceso.AccesoDenegadoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -66,6 +68,22 @@ public class ManejadorGlobalErrores {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorRespuesta> archivoGrande(MaxUploadSizeExceededException ex) {
         return responder(HttpStatus.PAYLOAD_TOO_LARGE, "El archivo es demasiado grande", List.of());
+    }
+
+    /**
+     * La base de datos rechazó el cambio por una regla suya (por ejemplo, un valor que debe ser
+     * único y ya existe). Suele pasar cuando dos personas guardan lo mismo al mismo tiempo.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorRespuesta> datoDuplicado(DataIntegrityViolationException ex) {
+        log.warn("La base de datos rechazó un cambio: {}", ex.getMostSpecificCause().getMessage());
+        return responder(HttpStatus.CONFLICT, "No se pudo guardar: ese dato ya existe o alguien más lo acaba de cambiar. Revisa e intenta de nuevo.", List.of());
+    }
+
+    /** Un candado tardó demasiado (dos personas modificando lo mismo). Se pide reintentar. */
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<ErrorRespuesta> candadoOcupado(PessimisticLockingFailureException ex) {
+        return responder(HttpStatus.CONFLICT, "Alguien más está modificando lo mismo en este momento. Intenta de nuevo.", List.of());
     }
 
     /** El cuerpo de la petición no es JSON válido (por ejemplo, texto en un campo numérico). */

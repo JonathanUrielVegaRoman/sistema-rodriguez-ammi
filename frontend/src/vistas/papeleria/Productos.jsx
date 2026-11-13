@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { productosApi } from "../../services/api"
-import { dinero } from "../../utils/formato"
+import { dinero, fechaHora } from "../../utils/formato"
+
+const NOMBRES_MOVIMIENTO = { ALTA: "Alta", VENTA: "Venta", CANCELACION: "Cancelación", RESURTIDO: "Resurtido", AJUSTE: "Corrección manual" }
 import { EMOJI_GENERICO, sugerirEmoji } from "../../utils/emojis"
 import SelectorEmoji from "../../components/SelectorEmoji"
 import Modal from "../../components/Modal"
@@ -22,6 +24,7 @@ export default function Productos({ consulta }) {
   const [formulario, setFormulario] = useState(VACIO)
   const [editando, setEditando] = useState(null)
   const [error, setError] = useState("")
+  const [historial, setHistorial] = useState(null) // { producto, movimientos } del producto abierto
 
   function cargar() {
     productosApi.listar().then(setProductos).catch((e) => setError(e.message))
@@ -85,6 +88,16 @@ export default function Productos({ consulta }) {
     }
   }
 
+  // Historial: cada entrada y salida del producto (ver MovimientoInventario.java en el backend).
+  async function verHistorial(p) {
+    setError("")
+    try {
+      setHistorial({ producto: p, movimientos: await productosApi.movimientos(p.id) })
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   const texto = busqueda.trim().toLowerCase()
   const visibles = productos
     .filter((p) => !soloResurtir || p.necesitaResurtir)
@@ -123,6 +136,7 @@ export default function Productos({ consulta }) {
               )}
               <div className="producto-acciones">
                 {!p.servicio && <button className="btn btn--texto" onClick={() => resurtir(p)}>Resurtir</button>}
+                {!p.servicio && <button className="btn btn--texto" onClick={() => verHistorial(p)}>Historial</button>}
                 <button className="btn btn--texto" onClick={() => editar(p)}>Editar</button>
               </div>
             </li>
@@ -130,6 +144,30 @@ export default function Productos({ consulta }) {
         </ul>
         {visibles.length === 0 && <p className="texto-tenue texto-centro">No hay productos que mostrar.</p>}
       </div>
+
+      {historial && (
+        <Modal titulo={`Historial · ${historial.producto.nombre}`} alCerrar={() => setHistorial(null)}>
+          <p className="texto-tenue">Últimos movimientos, del más reciente al más antiguo. Hoy hay {historial.producto.existencia} piezas.</p>
+          {historial.movimientos.length === 0 && <p className="texto-tenue">Sin movimientos registrados todavía.</p>}
+          <div className="tabla-desplazable">
+            <table className="tabla cifra">
+              <thead>
+                <tr><th>Cuándo</th><th>Qué pasó</th><th>Cantidad</th><th>Quedaron</th></tr>
+              </thead>
+              <tbody>
+                {historial.movimientos.map((m, i) => (
+                  <tr key={i}>
+                    <th>{fechaHora(m.fecha)}</th>
+                    <td>{NOMBRES_MOVIMIENTO[m.tipo]}{m.nota && m.tipo !== "ALTA" ? ` · ${m.nota}` : ""}</td>
+                    <td className={m.cantidad > 0 ? "texto-verde" : "texto-ambar"}>{m.cantidad > 0 ? "+" : "−"}{Math.abs(m.cantidad)}</td>
+                    <td>{m.existenciaResultante}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Modal>
+      )}
 
       {editando && (
         <Modal titulo={editando === "nuevo" ? "Nuevo producto" : "Editar producto"} alCerrar={() => setEditando(null)}>

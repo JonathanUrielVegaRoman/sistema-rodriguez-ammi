@@ -2,6 +2,9 @@ import { useEffect, useState } from "react"
 import { ir } from "../hooks/useRuta"
 import { impresionesApi, ordenesApi, productosApi, promocionesApi } from "../services/api"
 import Icono from "../components/Icono"
+import { enlaceWhatsapp } from "../utils/formato"
+
+const DIAS_PARA_RECORDAR = 3
 
 /*
   INICIO = tablero de pendientes del día. En lugar de una pantalla vacía, muestra lo que
@@ -31,6 +34,8 @@ export default function Inicio() {
   }, [])
 
   const pendientesImpresion = datos?.cola.filter((t) => t.estado === "PENDIENTE").length ?? 0
+  // Órdenes LISTAS desde hace 3 días o más: conviene recordarle al cliente.
+  const sinRecoger = (datos?.listas ?? []).filter((o) => o.diasLista != null && o.diasLista >= DIAS_PARA_RECORDAR)
   const sinFelicitar = datos?.cumple.filter((c) => c.esHoy && !c.enviado).length ?? 0
 
   return (
@@ -67,6 +72,30 @@ export default function Inicio() {
           </div>
         </article>
       </div>
+
+      {sinRecoger.length > 0 && (
+        <div className="panel">
+          <h2 className="panel-titulo">Lentes listos que no han recogido</h2>
+          <ul className="lista-simple">
+            {sinRecoger.map((o) => (
+              <li key={o.folio}>
+                <a href={`#/optica/ordenes/${o.folio}`}>Folio {o.folio} · {o.clienteNombre}</a>
+                <span className="insignia insignia--ambar cifra">hace {o.diasLista} días</span>
+                {o.clienteCelular && (
+                  <a
+                    className="btn btn--verde btn--chico"
+                    target="_blank"
+                    rel="noopener"
+                    href={enlaceWhatsapp(o.clienteCelular, `Hola ${o.clienteNombre.split(" ")[0]}, te recordamos que tus lentes están listos en Óptica RODRÍGUEZ (folio ${o.folio}). ¡Te esperamos!`)}
+                  >
+                    Recordar
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {datos?.resurtir.length > 0 && (
         <div className="panel">

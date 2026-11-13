@@ -12,6 +12,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import javax.print.attribute.HashPrintRequestAttributeSet;
@@ -54,6 +57,17 @@ public class ImpresoraService {
     private static final Logger log = LoggerFactory.getLogger(ImpresoraService.class);
     private static final Set<String> IMAGENES = Set.of("jpg", "jpeg", "png");
     private static final float DPI_IMPRESION = 200f;
+
+    /**
+     * LÍMITES DE MEMORIA. Los archivos del buzón los sube cualquier cliente, así que no se puede
+     * confiar en su tamaño: una foto de 200 megapixeles o un PDF con una página "gigante" ocuparían
+     * tanta memoria al abrirse que tumbarían TODO el sistema (ventas incluidas).
+     * Por eso nunca se abre una imagen a más de ~12 megapixeles (de sobra para una hoja carta a
+     * 200 DPI, que son 3.7) y se rechaza lo que pase de 250.
+     */
+    private static final long MAX_PIXELES_EN_MEMORIA = 12_000_000L;
+    private static final long MAX_PIXELES_ARCHIVO = 250_000_000L;
+    private static final int MAX_HOJAS_POR_TRABAJO = 500;
 
     public enum Papel { CARTA, OFICIO, A4 }
 
@@ -100,7 +114,7 @@ public class ImpresoraService {
     /** Imagen PNG de una página, del ancho indicado, en color o en gris. */
     public byte[] vistaPrevia(Path archivo, int pagina, boolean color, int ancho) {
         BufferedImage imagen = esPdf(archivo)
-                ? renderizarPdf(archivo, pagina - 1, 72f * ancho / 612f, color)
+                ? renderizarPdf(archivo, pagina - 1, ancho, color)
                 : leerImagen(archivo, color);
         BufferedImage chica = escalar(imagen, ancho);
         try (ByteArrayOutputStream salida = new ByteArrayOutputStream()) {
@@ -118,6 +132,10 @@ public class ImpresoraService {
         int total = paginas(archivo);
         List<Integer> elegidas = interpretarPaginas(o.paginas(), total); // índices desde 0
         int copias = Math.max(1, Math.min(o.copias(), 100));
+        if ((long) elegidas.size() * copias > MAX_HOJAS_POR_TRABAJO) {
+            throw new ReglaDeNegocioException("Son " + (elegidas.size() * copias) + " hojas en un solo envío. Imprime por partes (máximo "
+                    + MAX_HOJAS_POR_TRABAJO + "), usando el campo de páginas.");
+        }
 
         PrintRequestAttributeSet atributos = new HashPrintRequestAttributeSet();
         atributos.add(new Copies(copias));
@@ -142,7 +160,8 @@ public class ImpresoraService {
                     PDFRenderer render = new PDFRenderer(pdf);
                     trabajo.setPrintable(new PaginasComoImagen(elegidas.size(), i -> {
                         try {
-                            return render.renderImageWithDPI(elegidas.get(i), DPI_IMPRESION, o.color() ? ImageType.RGB : ImageType.GRAY);
+                            float dpi = dpiSeguro(pdf.getPage(elegidas.get(i)).getMediaBox(), DPI_IMPRESION);
+                            return new Hoja(render.renderImageWithDPI(elegidas.get(i), dpi, o.color() ? ImageType.RGB : ImageType.GRAY), dpi);
                         } catch (IOException e) {
                             throw new UncheckedIOException(e);
                         }
@@ -151,7 +170,7 @@ public class ImpresoraService {
                 }
             } else {
                 BufferedImage imagen = leerImagen(archivo, o.color());
-                trabajo.setPrintable(new PaginasComoImagen(1, i -> imagen, o.ajuste()));
+                trabajo.setPrintable(new PaginasComoImagen(1, i -> new Hoja(imagen, DPI_IMPRESION), o.ajuste()));
                 trabajo.print(atributos);
             }
         } catch (PrinterException | IOException e) {
@@ -234,22 +253,80 @@ public class ImpresoraService {
         return "pdf".equals(AlmacenArchivos.extension(archivo.getFileName().toString()));
     }
 
-    private BufferedImage renderizarPdf(Path archivo, int indice, float dpi, boolean color) {
+    /** Convierte una página del PDF en imagen de (aproximadamente) el ancho pedido en pixeles. */
+    private BufferedImage renderizarPdf(Path archivo, int indice, int anchoPixeles, boolean color) {
         try (PDDocument pdf = Loader.loadPDF(archivo.toFile())) {
             if (indice < 0 || indice >= pdf.getNumberOfPages()) {
                 throw new ReglaDeNegocioException("Esa página no existe");
             }
+            PDRectangle caja = pdf.getPage(indice).getMediaBox();
+            float dpi = dpiSeguro(caja, 72f * anchoPixeles / Math.max(1f, caja.getWidth()));
             return new PDFRenderer(pdf).renderImageWithDPI(indice, dpi, color ? ImageType.RGB : ImageType.GRAY);
         } catch (IOException e) {
             throw new ReglaDeNegocioException("No se pudo leer el PDF (¿está dañado o protegido con contraseña?)");
         }
     }
 
+    /**
+     * Baja el DPI si la página es tan grande que la imagen resultante no cabría en memoria.
+     * (Una página normal tamaño carta a 200 DPI mide 1700 x 2200 pixeles: 3.7 megapixeles.)
+     */
+    static float dpiSeguro(PDRectangle caja, float dpiDeseado) {
+        double pixeles = (caja.getWidth() / 72.0 * dpiDeseado) * (caja.getHeight() / 72.0 * dpiDeseado);
+        if (pixeles <= MAX_PIXELES_EN_MEMORIA) {
+            return dpiDeseado;
+        }
+        return (float) (dpiDeseado * Math.sqrt(MAX_PIXELES_EN_MEMORIA / pixeles));
+    }
+
+    /**
+     * Revisa una imagen RECIÉN SUBIDA sin abrirla completa: solo lee su encabezado para saber
+     * cuánto mide. Rechaza lo que no es imagen de verdad y lo que es absurdamente grande.
+     */
+    public static void validarImagen(java.io.InputStream datos, String nombre) {
+        try (ImageInputStream entrada = ImageIO.createImageInputStream(datos)) {
+            Iterator<ImageReader> lectores = entrada == null ? Collections.emptyIterator() : ImageIO.getImageReaders(entrada);
+            if (!lectores.hasNext()) {
+                throw new ReglaDeNegocioException("\"" + nombre + "\" no es una imagen válida");
+            }
+            ImageReader lector = lectores.next();
+            try {
+                lector.setInput(entrada);
+                if ((long) lector.getWidth(0) * lector.getHeight(0) > MAX_PIXELES_ARCHIVO) {
+                    throw new ReglaDeNegocioException("La imagen \"" + nombre + "\" es demasiado grande");
+                }
+            } finally {
+                lector.dispose();
+            }
+        } catch (IOException e) {
+            throw new ReglaDeNegocioException("\"" + nombre + "\" no es una imagen válida");
+        }
+    }
+
+    /**
+     * Abre una imagen SIN pasarse de memoria: si es enorme, la lee "saltándose" pixeles
+     * (de cada N toma 1), con lo que queda de un tamaño manejable sin cargarla completa.
+     */
     private BufferedImage leerImagen(Path archivo, boolean color) {
-        try {
-            BufferedImage original = ImageIO.read(archivo.toFile());
-            if (original == null) {
+        try (ImageInputStream entrada = ImageIO.createImageInputStream(archivo.toFile())) {
+            Iterator<ImageReader> lectores = entrada == null ? Collections.emptyIterator() : ImageIO.getImageReaders(entrada);
+            if (!lectores.hasNext()) {
                 throw new ReglaDeNegocioException("No se pudo leer la imagen");
+            }
+            ImageReader lector = lectores.next();
+            BufferedImage original;
+            try {
+                lector.setInput(entrada);
+                long pixeles = (long) lector.getWidth(0) * lector.getHeight(0);
+                if (pixeles > MAX_PIXELES_ARCHIVO) {
+                    throw new ReglaDeNegocioException("La imagen es demasiado grande para imprimirse desde aquí");
+                }
+                int salto = (int) Math.max(1, Math.ceil(Math.sqrt(pixeles / (double) MAX_PIXELES_EN_MEMORIA)));
+                ImageReadParam parametros = lector.getDefaultReadParam();
+                parametros.setSourceSubsampling(salto, salto, 0, 0);
+                original = lector.read(0, parametros);
+            } finally {
+                lector.dispose();
             }
             // Pasamos a RGB (o gris) sobre fondo blanco: así las imágenes con transparencia no salen negras.
             BufferedImage lienzo = new BufferedImage(original.getWidth(), original.getHeight(),
@@ -277,18 +354,22 @@ public class ImpresoraService {
         return chica;
     }
 
+    /** Una hoja lista para imprimir: su imagen y a cuántos DPI se generó. */
+    private record Hoja(BufferedImage imagen, float dpi) {
+    }
+
     /**
      * "Printable" = lo que Java llama para dibujar cada hoja. Recibe el número de página y
      * dibuja la imagen correspondiente centrada dentro del área imprimible.
      */
     private static class PaginasComoImagen implements Printable {
         private final int cantidad;
-        private final java.util.function.IntFunction<BufferedImage> pagina;
+        private final java.util.function.IntFunction<Hoja> pagina;
         private final Ajuste ajuste;
         private int ultimoIndice = -1;
-        private BufferedImage ultima;
+        private Hoja ultima;
 
-        PaginasComoImagen(int cantidad, java.util.function.IntFunction<BufferedImage> pagina, Ajuste ajuste) {
+        PaginasComoImagen(int cantidad, java.util.function.IntFunction<Hoja> pagina, Ajuste ajuste) {
             this.cantidad = cantidad;
             this.pagina = pagina;
             this.ajuste = ajuste;
@@ -304,15 +385,15 @@ public class ImpresoraService {
                 ultima = pagina.apply(indice);
                 ultimoIndice = indice;
             }
-            BufferedImage img = ultima;
+            BufferedImage img = ultima.imagen();
             Graphics2D g = (Graphics2D) grafico;
             g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
 
             double areaX = formato.getImageableX(), areaY = formato.getImageableY();
             double areaAncho = formato.getImageableWidth(), areaAlto = formato.getImageableHeight();
 
-            // Tamaño "real": los PDF se generaron a 200 DPI; las fotos se suponen a 200 DPI también.
-            double escalaReal = 72.0 / DPI_IMPRESION;
+            // Tamaño "real": se usa el DPI con el que se generó esta hoja (las fotos se suponen a 200 DPI).
+            double escalaReal = 72.0 / ultima.dpi();
             double escalaAjuste = Math.min(areaAncho / img.getWidth(), areaAlto / img.getHeight());
             double escala = ajuste == Ajuste.TAMANO_REAL ? Math.min(escalaReal, escalaAjuste) : escalaAjuste;
 

@@ -76,7 +76,8 @@ public class ReporteService {
         }
 
         // ---------- Papelería ----------
-        List<Venta> delPeriodo = ventas.findByFechaBetweenOrderByFechaAsc(inicio, fin);
+        List<Venta> delPeriodo = ventas.findByFechaBetweenOrderByFechaAsc(inicio, fin).stream()
+                .filter(v -> !v.isCancelada()).toList(); // las canceladas no cuentan
         BigDecimal totalPapeleria = BigDecimal.ZERO;
         Map<MetodoPago, BigDecimal> metodoPapeleria = ceros();
         Map<String, ProductoVendido> productos = new HashMap<>();
@@ -105,7 +106,7 @@ public class ReporteService {
         List<OrdenLentes> nuevas = ordenes.findByFechaBetweenOrderByFechaAsc(inicio, fin).stream()
                 .filter(o -> o.getEstado() != EstadoOrden.CANCELADA).toList();
         BigDecimal valorNuevas = nuevas.stream().map(OrdenLentes::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-        List<OrdenLentes> pendientes = ordenes.findTop100ByEstadoInOrderByFechaDesc(EnumSet.of(EstadoOrden.EN_LABORATORIO, EstadoOrden.LISTA));
+        List<OrdenLentes> pendientes = ordenes.findByEstadoIn(EnumSet.of(EstadoOrden.EN_LABORATORIO, EstadoOrden.LISTA));
         BigDecimal saldo = pendientes.stream().map(OrdenLentes::getSaldo).reduce(BigDecimal.ZERO, BigDecimal::add);
 
         List<PorDia> porDia = dias.entrySet().stream()

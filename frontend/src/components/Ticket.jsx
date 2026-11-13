@@ -4,7 +4,8 @@ import { dinero, fechaHora, NOMBRES_PAGO } from "../utils/formato"
   TICKET de venta. Es un componente reutilizable: se usa al cobrar y se podrá usar
   para reimprimir. Recibe el ticket por "props" ({ ticket }).
 
-  Al imprimir (window.print()), app.css esconde todo lo demás y deja solo el elemento
+  Si hay impresora de tickets configurada, el backend lo imprime directo (BotonImprimir).
+  Si no, al imprimir con el navegador (window.print()), app.css esconde todo lo demás y deja solo el elemento
   con la clase "ticket", con el ancho de una impresora térmica de 58 mm.
 */
 export default function Ticket({ ticket }) {
@@ -14,6 +15,7 @@ export default function Ticket({ ticket }) {
         <strong>PAPELERÍA AMMI</strong>
         <span>Folio {ticket.folio}</span>
         <span>{fechaHora(ticket.fecha)}</span>
+        {ticket.cancelada && <strong>*** CANCELADO ***</strong>}
       </header>
 
       <table className="ticket-tabla">
@@ -36,6 +38,12 @@ export default function Ticket({ ticket }) {
         <dd className="cifra">{dinero(ticket.total)}</dd>
         <dt>Pago</dt>
         <dd>{NOMBRES_PAGO[ticket.metodoPago]}</dd>
+        {ticket.referenciaPago && (
+          <>
+            <dt>Ref.</dt>
+            <dd className="cifra">{ticket.referenciaPago}</dd>
+          </>
+        )}
         {ticket.pagaCon != null && (
           <>
             <dt>Recibido</dt>

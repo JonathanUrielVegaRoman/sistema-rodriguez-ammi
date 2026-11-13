@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ordenesApi } from "../../services/api"
 import { ir } from "../../hooks/useRuta"
 import { dinero, enlaceWhatsapp, fechaCorta, fechaHora, NOMBRES_ESTADO_ORDEN, NOMBRES_MICA, NOMBRES_PAGO } from "../../utils/formato"
 import TablaReceta from "../../components/TablaReceta"
+import BotonImprimir from "../../components/BotonImprimir"
+import CampoReferencia from "../../components/CampoReferencia"
+import { nuevaClave } from "../../utils/clave"
 import Icono from "../../components/Icono"
 
 /*
@@ -18,6 +21,9 @@ export default function OrdenDetalle({ folio }) {
   const [error, setError] = useState("")
   const [abono, setAbono] = useState("")
   const [metodo, setMetodo] = useState("EFECTIVO")
+  const [referencia, setReferencia] = useState("")
+  // Clave única del abono (ver utils/clave.js): cambia al cambiar el monto o después de cada abono.
+  const claveAbono = useMemo(() => nuevaClave(), [abono, metodo, orden?.pagos.length])
 
   useEffect(() => {
     ordenesApi.obtener(folio).then(setOrden).catch((e) => setError(e.message))
@@ -27,6 +33,23 @@ export default function OrdenDetalle({ folio }) {
     setError("")
     try {
       setOrden(await promesa)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  async function registrarAbono() {
+    setError("")
+    try {
+      setOrden(await ordenesApi.abonar(orden.folio, {
+        monto: Number(abono),
+        metodoPago: metodo,
+        referencia: metodo !== "EFECTIVO" ? referencia.trim() || null : null,
+        claveUnica: claveAbono,
+      }))
+      // Solo se limpia el formulario si el abono SÍ se registró (si falló, se puede reintentar tal cual).
+      setAbono("")
+      setReferencia("")
     } catch (e) {
       setError(e.message)
     }
@@ -92,7 +115,10 @@ export default function OrdenDetalle({ folio }) {
               {Number(orden.descuentoManual) > 0 && <div className="totales-renglon texto-verde"><dt>{orden.motivoDescuento}</dt><dd>−{dinero(orden.descuentoManual)}</dd></div>}
               <div className="totales-renglon totales-total"><dt>Total</dt><dd>{dinero(orden.total)}</dd></div>
               {orden.pagos.map((p, i) => (
-                <div key={i} className="totales-renglon texto-tenue"><dt>{fechaHora(p.fecha)} · {NOMBRES_PAGO[p.metodoPago]}</dt><dd>−{dinero(p.monto)}</dd></div>
+                <div key={i} className="totales-renglon texto-tenue">
+                  <dt>{fechaHora(p.fecha)} · {NOMBRES_PAGO[p.metodoPago]}{p.referencia ? ` · ref. ${p.referencia}` : ""}</dt>
+                  <dd>−{dinero(p.monto)}</dd>
+                </div>
               ))}
               <div className={"totales-renglon totales-total" + (debe ? " texto-ambar" : " texto-verde")}><dt>Saldo</dt><dd>{dinero(orden.saldo)}</dd></div>
             </dl>
@@ -108,7 +134,8 @@ export default function OrdenDetalle({ folio }) {
                     <button key={v} type="button" className={metodo === v ? "activo" : ""} onClick={() => setMetodo(v)}>{t}</button>
                   ))}
                 </div>
-                <button className="btn btn--primario" disabled={!abono} onClick={() => { accion(ordenesApi.abonar(orden.folio, Number(abono), metodo)); setAbono("") }}>
+                <CampoReferencia metodo={metodo} valor={referencia} alCambiar={setReferencia} />
+                <button className="btn btn--primario" disabled={!abono} onClick={registrarAbono}>
                   Registrar abono
                 </button>
               </div>
@@ -131,7 +158,7 @@ export default function OrdenDetalle({ folio }) {
                   Entregar al cliente
                 </button>
               )}
-              <button className="btn btn--contorno" onClick={() => window.print()}><Icono nombre="impresora" /> Imprimir nota</button>
+              <BotonImprimir mandar={() => ordenesApi.imprimir(orden.folio)} texto="Imprimir nota" clase="btn btn--contorno" />
               {abierta && (
                 <button className="btn btn--texto btn--peligro-texto" onClick={() => window.confirm("¿Cancelar la orden? El armazón regresa al inventario. Las devoluciones de dinero se hacen aparte.") && accion(ordenesApi.estado(orden.folio, "CANCELADA"))}>
                   Cancelar orden

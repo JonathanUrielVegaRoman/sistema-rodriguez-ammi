@@ -21,4 +21,8 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
 
     @EntityGraph(attributePaths = "detalles")
     Optional<Venta> findWithDetallesById(Long id);
+
+    /** ¿Ya se registró un cobro con esta clave? (para no cobrar doble si el celular reintenta) */
+    @EntityGraph(attributePaths = "detalles")
+    Optional<Venta> findByClaveUnica(String claveUnica);
 }

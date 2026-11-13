@@ -82,6 +82,25 @@ public class ClienteService {
         return ResultadoEliminar.ELIMINADO;
     }
 
+    public record ResultadoVarios(int eliminados, int archivados) {
+    }
+
+    /**
+     * Elimina VARIOS clientes de una vez (selección múltiple en la lista).
+     * Aplica la misma regla a cada uno: sin órdenes se borra, con órdenes se archiva.
+     * Todo en una sola transacción.
+     */
+    @Transactional
+    public ResultadoVarios eliminarVarios(List<Long> ids) {
+        int eliminados = 0;
+        int archivados = 0;
+        for (Long id : ids) {
+            if (eliminar(id) == ResultadoEliminar.ELIMINADO) eliminados++;
+            else archivados++;
+        }
+        return new ResultadoVarios(eliminados, archivados);
+    }
+
     /** Devuelve un cliente archivado a la lista. */
     @Transactional
     public ClienteDto.Respuesta restaurar(Long id) {

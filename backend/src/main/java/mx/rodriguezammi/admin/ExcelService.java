@@ -1,6 +1,10 @@
 package mx.rodriguezammi.admin;
 
+import mx.rodriguezammi.optica.armazon.Armazon;
+import mx.rodriguezammi.optica.armazon.ArmazonRepository;
 import mx.rodriguezammi.optica.orden.OrdenLentes;
+import mx.rodriguezammi.papeleria.producto.Producto;
+import mx.rodriguezammi.papeleria.producto.ProductoRepository;
 import mx.rodriguezammi.optica.orden.OrdenRepository;
 import mx.rodriguezammi.optica.orden.PagoOrden;
 import mx.rodriguezammi.optica.orden.PartidaLente;
@@ -33,6 +37,7 @@ import java.util.stream.Collectors;
  *   2. Papelería        → un renglón por producto vendido, con FECHA y HORA del ticket
  *   3. Óptica pagos     → cada anticipo/abono que entró, con fecha y hora
  *   4. Óptica órdenes   → cada orden con su total, lo pagado y lo que falta
+ *   5. Canceladas       → ventas de papelería canceladas (no suman en las demás hojas)
  *
  * Las fechas y montos se guardan como fechas y números REALES de Excel (no como texto),
  * así el dueño puede filtrar, ordenar y sumar en Excel sin problemas.
@@ -46,16 +51,75 @@ public class ExcelService {
 
     private final VentaRepository ventas;
     private final OrdenRepository ordenes;
+    private final ProductoRepository productos;
+    private final ArmazonRepository armazones;
 
-    public ExcelService(VentaRepository ventas, OrdenRepository ordenes) {
+    public ExcelService(VentaRepository ventas, OrdenRepository ordenes, ProductoRepository productos, ArmazonRepository armazones) {
         this.ventas = ventas;
         this.ordenes = ordenes;
+        this.productos = productos;
+        this.armazones = armazones;
+    }
+
+    /**
+     * INVENTARIO en Excel: existencias y valor de la mercancía de los dos negocios.
+     * Sirve para resurtir, para un conteo físico ("lo que dice el sistema vs. lo que hay")
+     * y para saber cuánto dinero hay invertido en mercancía.
+     */
+    public byte[] inventario() {
+        try (Workbook libro = new XSSFWorkbook(); ByteArrayOutputStream salida = new ByteArrayOutputStream()) {
+            Estilos e = new Estilos(libro);
+
+            Sheet papeleria = libro.createSheet("Papelería");
+            String[] cols = {"Producto", "Código de barras", "Precio", "Existencia", "Avisar en", "¿Resurtir?", "Valor a precio de venta", "Conteo físico"};
+            int f = encabezados(papeleria, cols, e);
+            for (Producto p : productos.findByActivoTrueOrderByNombreAsc()) {
+                if (p.isServicio()) {
+                    continue; // los servicios (impresiones) no son mercancía
+                }
+                Row r = papeleria.createRow(f++);
+                texto(r, 0, p.getNombre(), e.normal);
+                texto(r, 1, p.getCodigoBarras(), e.normal);
+                dinero(r, 2, p.getPrecio(), e.dinero);
+                numero(r, 3, p.getExistencia(), e.normal);
+                numero(r, 4, p.getStockMinimo(), e.normal);
+                texto(r, 5, p.necesitaResurtir() ? "SÍ" : "", e.normal);
+                formula(r, 6, "C" + f + "*D" + f, e.dinero);
+            }
+            filaTotal(papeleria, f, e, 0, new int[]{3}, new int[]{6});
+            cerrar(papeleria, cols.length, f, 36, 18, 12, 12, 11, 11, 22, 14);
+
+            Sheet optica = libro.createSheet("Armazones");
+            String[] cols2 = {"Código", "Marca", "Modelo", "Color", "Medidas", "Ubicación", "Precio", "Existencia", "Valor a precio de venta", "Conteo físico"};
+            f = encabezados(optica, cols2, e);
+            for (Armazon a : armazones.findByActivoTrueOrderByCodigoAsc()) {
+                Row r = optica.createRow(f++);
+                texto(r, 0, a.getCodigo(), e.normal);
+                texto(r, 1, a.getMarca(), e.normal);
+                texto(r, 2, a.getModelo(), e.normal);
+                texto(r, 3, a.getColor(), e.normal);
+                texto(r, 4, a.getMedidas(), e.normal);
+                texto(r, 5, a.getUbicacion(), e.normal);
+                dinero(r, 6, a.getPrecio(), e.dinero);
+                numero(r, 7, a.getExistencia(), e.normal);
+                formula(r, 8, "G" + f + "*H" + f, e.dinero);
+            }
+            filaTotal(optica, f, e, 0, new int[]{7}, new int[]{8});
+            cerrar(optica, cols2.length, f, 16, 16, 18, 12, 14, 22, 12, 12, 22, 14);
+
+            libro.write(salida);
+            return salida.toByteArray();
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
     }
 
     public byte[] generar(LocalDate desde, LocalDate hasta) {
         LocalDateTime inicio = desde.atStartOfDay();
         LocalDateTime fin = hasta.plusDays(1).atStartOfDay().minusNanos(1);
-        List<Venta> delPeriodo = ventas.findByFechaBetweenOrderByFechaAsc(inicio, fin);
+        List<Venta> todas = ventas.findByFechaBetweenOrderByFechaAsc(inicio, fin);
+        List<Venta> delPeriodo = todas.stream().filter(v -> !v.isCancelada()).toList();
+        List<Venta> canceladas = todas.stream().filter(Venta::isCancelada).toList();
         List<PagoOrden> pagos = ordenes.pagosEntre(inicio, fin);
         List<OrdenLentes> ordenesPeriodo = ordenes.findByFechaBetweenOrderByFechaAsc(inicio, fin);
 
@@ -65,6 +129,7 @@ public class ExcelService {
             hojaPapeleria(libro, e, delPeriodo);
             hojaPagosOptica(libro, e, pagos);
             hojaOrdenes(libro, e, ordenesPeriodo);
+            hojaCanceladas(libro, e, canceladas);
             libro.write(salida);
             return salida.toByteArray();
         } catch (IOException ex) {
@@ -115,7 +180,7 @@ public class ExcelService {
 
     private void hojaPapeleria(Workbook libro, Estilos e, List<Venta> lista) {
         Sheet hoja = libro.createSheet("Papelería");
-        String[] cols = {"Folio", "Fecha", "Hora", "Día", "Método de pago", "Producto", "Cantidad", "Precio unitario", "Importe", "Total del ticket"};
+        String[] cols = {"Folio", "Fecha", "Hora", "Día", "Método de pago", "Producto", "Cantidad", "Precio unitario", "Importe", "Total del ticket", "Referencia de pago"};
         int f = encabezados(hoja, cols, e);
         for (Venta v : lista) {
             boolean primero = true;
@@ -132,16 +197,17 @@ public class ExcelService {
                 dinero(r, 8, d.getImporte(), e.dinero);
                 // El total del ticket solo en su primer renglón, para que la suma de la columna no se duplique.
                 if (primero) dinero(r, 9, v.getTotal(), e.dinero);
+                texto(r, 10, v.getReferenciaPago(), e.normal);
                 primero = false;
             }
         }
         filaTotal(hoja, f, e, 5, new int[]{6}, new int[]{8, 9});
-        cerrar(hoja, cols.length, f, 8, 10, 8, 12, 16, 34, 10, 15, 13, 16);
+        cerrar(hoja, cols.length, f, 8, 10, 8, 12, 16, 34, 10, 15, 13, 16, 24);
     }
 
     private void hojaPagosOptica(Workbook libro, Estilos e, List<PagoOrden> pagos) {
         Sheet hoja = libro.createSheet("Óptica pagos");
-        String[] cols = {"Fecha", "Hora", "Día", "Folio de orden", "Cliente", "Método de pago", "Monto"};
+        String[] cols = {"Fecha", "Hora", "Día", "Folio de orden", "Cliente", "Método de pago", "Monto", "Referencia de pago"};
         int f = encabezados(hoja, cols, e);
         for (PagoOrden p : pagos) {
             Row r = hoja.createRow(f++);
@@ -152,9 +218,10 @@ public class ExcelService {
             texto(r, 4, p.getOrden().getCliente().getNombre(), e.normal);
             texto(r, 5, nombre(p.getMetodoPago()), e.normal);
             dinero(r, 6, p.getMonto(), e.dinero);
+            texto(r, 7, p.getReferencia(), e.normal);
         }
         filaTotal(hoja, f, e, 5, new int[]{}, new int[]{6});
-        cerrar(hoja, cols.length, f, 12, 8, 12, 14, 30, 16, 14);
+        cerrar(hoja, cols.length, f, 12, 8, 12, 14, 30, 16, 14, 24);
     }
 
     private void hojaOrdenes(Workbook libro, Estilos e, List<OrdenLentes> lista) {
@@ -184,6 +251,24 @@ public class ExcelService {
         }
         filaTotal(hoja, f, e, 5, new int[]{}, new int[]{6, 7, 8, 9, 10});
         cerrar(hoja, cols.length, f, 8, 12, 8, 28, 15, 40, 13, 13, 13, 13, 13);
+    }
+
+    /** Ventas canceladas: NO están en las demás hojas ni en los totales; aquí se listan para control. */
+    private void hojaCanceladas(Workbook libro, Estilos e, List<Venta> lista) {
+        Sheet hoja = libro.createSheet("Canceladas");
+        String[] cols = {"Folio", "Fecha de venta", "Hora", "Total", "Cancelada el", "Motivo"};
+        int f = encabezados(hoja, cols, e);
+        for (Venta v : lista) {
+            Row r = hoja.createRow(f++);
+            numero(r, 0, v.getId(), e.normal);
+            fecha(r, 1, v.getFecha(), e.fecha);
+            fecha(r, 2, v.getFecha(), e.hora);
+            dinero(r, 3, v.getTotal(), e.dinero);
+            if (v.getFechaCancelacion() != null) fecha(r, 4, v.getFechaCancelacion(), e.fechaHora);
+            texto(r, 5, v.getMotivoCancelacion(), e.normal);
+        }
+        if (f == 1) texto(hoja.createRow(1), 0, "Sin ventas canceladas en el periodo", e.normal);
+        cerrar(hoja, cols.length, f, 8, 14, 8, 13, 18, 40);
     }
 
     // ---------------- Ayudantes ----------------

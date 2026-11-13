@@ -1973,3 +1973,129 @@ details summary {
 .acciones--excel {
   margin-bottom: 1.25rem;
 }
+
+/* ========================= SELECCIÓN MÚLTIPLE DE CLIENTES ========================= */
+
+.lista-clientes button.elegido {
+  background: var(--rojo-fondo);
+}
+
+.casilla-cliente {
+  flex: none;
+  width: 1.3rem;
+  height: 1.3rem;
+  margin: 0 0.6rem;
+  accent-color: var(--rojo-solido);
+  pointer-events: none;
+}
+
+/* Barra fija abajo con el botón de eliminar mientras hay clientes marcados */
+.barra-seleccion {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radio);
+  background: var(--superficie);
+  box-shadow: var(--sombra-modal);
+}
+
+/* ========================= TICKETS (admin) ========================= */
+
+.tabla--clic tbody tr {
+  cursor: pointer;
+}
+
+.tabla--clic tbody tr:hover {
+  background: var(--superficie-2);
+}
+
+.fila-cancelada {
+  color: var(--texto-tenue);
+  text-decoration: line-through;
+}
+
+.reimprimir {
+  margin-top: 0.5rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--linea);
+}
+
+.estado-impresion {
+  align-self: center;
+}
+
+/* ========================= VISOR 3D DE ARMAZONES ========================= */
+
+.comparador3d {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.visor3d-lienzo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 62vh;
+  overflow: hidden;
+  border-radius: var(--radio-chico);
+  /* Fondo claro SIEMPRE (también en tema oscuro): un armazón negro no se vería sobre negro. */
+  background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e6ebf1 70%, #d5dce5 100%);
+  touch-action: none; /* el dedo gira el modelo en lugar de mover la página */
+  cursor: grab;
+}
+
+.visor3d-lienzo:active {
+  cursor: grabbing;
+}
+
+.visor3d-lienzo canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.visor3d-aviso {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  color: #4b5160;
+  text-align: center;
+}
+
+.visor3d-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: 0.6rem;
+}
+
+.visor3d-pie .segmentado {
+  flex: 1 1 14rem;
+  max-width: 22rem;
+}
+
+.muestra--fantasma {
+  background: #ff6a00;
+  opacity: 0.6;
+}
+
+.entrada-color {
+  width: 3.2rem;
+  height: 2.6rem;
+  padding: 0.15rem;
+  border: 2px solid var(--linea);
+  border-radius: var(--radio-chico);
+  background: var(--entrada-fondo);
+  cursor: pointer;
+}
