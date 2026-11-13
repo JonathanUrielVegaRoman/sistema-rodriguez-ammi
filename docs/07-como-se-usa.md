@@ -28,6 +28,7 @@
 | Reimprimir un ticket | **Vender** → abajo del carrito | Escribir el folio (viene en el ticket) → **Reimprimir** |
 | Dar de alta mercancía | **Inventario → + Producto** | Nombre (el ícono se sugiere solo), precio, existencia y "avisar cuando queden" |
 | Cuando llega mercancía | **Inventario → Resurtir** | Escribir cuántas piezas llegaron |
+| Quitar un producto | **Inventario → Editar → Eliminar producto** | Si nunca se vendió se borra; si ya tiene ventas se quita del inventario y los tickets se conservan |
 | Saber por qué cambió una existencia | **Inventario → Historial** | Lista de cada venta, cancelación, resurtido y corrección del producto |
 | Cobrar con transferencia o tarjeta | **Vender** → elegir el método | Aparece un campo para la **clave de rastreo** o la **autorización del voucher** (opcional); sale en el ticket y en el Excel |
 | Imprimir archivos de un cliente | **Impresiones** | Tocar el archivo → ver la **vista previa** y elegir opciones (copias, color, papel, orientación, páginas) → **Imprimir** (sale directo en la impresora de la PC, también desde el celular) → las hojas se anotan solas → **Ya lo imprimí** → **Cobrar y entregar**. Word y Excel se abren para imprimirlos con su programa |
@@ -41,6 +42,7 @@
 | Borrar varios clientes | **Clientes → Seleccionar** | Marcar las casillas (o "Marcar todos") → **Eliminar seleccionados** |
 | Capturar graduación | Ficha del cliente → **+ Nueva graduación** | OD = ojo derecho, OI = ojo izquierdo |
 | Armazón nuevo | **Armazones → + Armazón** | Código, medidas de la varilla, precio → **Tomar foto** (fondo blanco, de frente) |
+| Quitar un armazón | Ficha del armazón → **Eliminar armazón** | Si nunca se vendió se borra con su foto; si ya está en una orden solo sale del catálogo |
 | Encontrar un armazón | **Armazones** | Buscar por código o tocar la **talla** (ej. 52 mm) para ver solo esa medida |
 | Comparar dos tallas parecidas | Ficha del armazón → **Modelo 3D y tallas** | Girar el modelo con el dedo; en "Comparar tamaño con otro armazón" el otro aparece encimado en naranja y una tabla dice la diferencia en milímetros |
 | Lentes que no han recogido | **Inicio** | Aparecen los que llevan 3 días o más listos, con botón **Recordar** por WhatsApp |
@@ -48,7 +50,7 @@
 | Promoción 2x1 | En la orden → **+ Par de regalo (2x1)** | Micas gratis; los tratamientos caros aparecen tachados |
 | Llegaron los lentes | **Órdenes → En laboratorio** → la orden | **Marcar como lista** → **Avisar por WhatsApp** |
 | Entregar | La orden | Registrar el abono del saldo → **Entregar al cliente** |
-| Felicitar cumpleaños | **Cumpleaños** | Botón **WhatsApp** (el mensaje y el código ya van escritos) → Enviar → **Ya lo envié** |
+| Felicitar cumpleaños | **Cumpleaños** | Botón **WhatsApp** (el mensaje y el código ya van escritos) → Enviar → **Ya lo envié**. El cupón vale **dos días**: el del cumpleaños y el siguiente; si ayer no se envió, hoy aparece en "Ayer" como última oportunidad |
 
 ## Solo el dueño (🔒)
 - **Reportes**: hoy, ayer, semana, mes, mes pasado o fechas a elegir. Cuánto entró por negocio y por método de pago, lo más vendido y lo que falta por cobrar en la óptica.
@@ -69,7 +71,7 @@ un modelo de otro más rápido que leer un código. Pero **no para los clientes*
 busca escribiendo su nombre o celular, y una lista con buscador es más rápida que una cuadrícula de
 iniciales. Para que la cuadrícula funcione bien:
 - Fotos **parejas**: mismo fondo blanco, armazón de frente, misma distancia.
-- La **talla** (52□18 140) va encima de la foto, porque hay modelos iguales en distinto tamaño.
+- La **talla** (52-18-140: lente, puente y varilla) va encima de la foto, porque hay modelos iguales en distinto tamaño.
 - En celular se muestran **2 por renglón**; en computadora, los que quepan.
 
 **¿Emojis o imágenes en la papelería?** Emojis: no hay que tomar fotos, no tardan en cargar y se

@@ -28,6 +28,7 @@ export default function Armazones() {
   const [error, setError] = useState("")
   const [subiendo, setSubiendo] = useState(false)
   const [pestana, setPestana] = useState("foto") // en la ficha: "foto" o "3d"
+  const [aviso, setAviso] = useState("")
 
   const recargar = () => setRecarga((n) => n + 1)
 
@@ -86,10 +87,11 @@ export default function Armazones() {
     }
   }
 
-  async function desactivar() {
-    if (!window.confirm(`¿Quitar el armazón ${ficha.codigo} del catálogo? Las órdenes anteriores no se afectan.`)) return
+  async function eliminar() {
+    if (!window.confirm(`¿Eliminar el armazón ${ficha.codigo}?\n\nSi nunca se vendió, se borra junto con su foto y no se puede deshacer. Si ya está en alguna orden, solo se quita del catálogo.`)) return
     try {
-      await armazonesApi.desactivar(ficha.id)
+      const r = await armazonesApi.desactivar(ficha.id)
+      setAviso(r?.mensaje ?? "")
       setFicha(null)
       recargar()
     } catch (err) {
@@ -109,6 +111,8 @@ export default function Armazones() {
         <h1 className="titulo-seccion">Armazones</h1>
         <button className="btn btn--verde" onClick={abrirNuevo}>+ Armazón</button>
       </div>
+
+      {aviso && <p className="alerta alerta--exito">{aviso}</p>}
 
       <CuadriculaArmazones recarga={recarga} alTocar={(a) => { setError(""); setPestana("foto"); setFicha(a) }} />
 
@@ -146,7 +150,7 @@ export default function Armazones() {
               <dt>Color</dt>
               <dd>{ficha.color || "—"}</dd>
               <dt>Medidas</dt>
-              <dd className="cifra">{ficha.medidas ?? "—"} <span className="texto-tenue">(lente □ puente, varilla)</span></dd>
+              <dd className="cifra">{ficha.medidas ?? "—"} <span className="texto-tenue">(lente - puente - varilla, en mm)</span></dd>
               <dt>Precio</dt>
               <dd className="cifra">{dinero(ficha.precio)}</dd>
               <dt>Existencia</dt>
@@ -157,7 +161,7 @@ export default function Armazones() {
             {error && <p className="mensaje-error">{error}</p>}
             <div className="acciones">
               <button className="btn btn--contorno" onClick={() => editar(ficha)}>Editar datos</button>
-              <button className="btn btn--texto btn--peligro-texto" onClick={desactivar}>Quitar del catálogo</button>
+              <button className="btn btn--peligro" onClick={eliminar}>Eliminar armazón</button>
             </div>
           </div>
         </Modal>
@@ -193,7 +197,7 @@ export default function Armazones() {
               </label>
             </div>
             <fieldset className="grupo">
-              <legend className="etiqueta">Medidas grabadas en la varilla (mm), ej. 52 □ 18 140</legend>
+              <legend className="etiqueta">Medidas grabadas en la varilla (mm). Si dice "52□18 140": lente 52, puente 18, varilla 140</legend>
               <div className="rejilla rejilla--3">
                 <label className="campo">
                   <span className="etiqueta">Lente</span>

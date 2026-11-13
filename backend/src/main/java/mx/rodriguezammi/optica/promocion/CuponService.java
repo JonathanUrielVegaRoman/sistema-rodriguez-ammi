@@ -27,6 +27,7 @@ import java.util.Locale;
  * Cupones de cumpleaños y descuentos especiales.
  *
  * Flujo de cumpleaños:
+ *   0. El cupón vale DOS días: el del cumpleaños y el siguiente (se ajusta en application.properties).
  *   1. Todos los días a las 8:00 (y también al abrir la pantalla de Cumpleaños, por si la
  *      computadora se prendió tarde) se generan cupones para quien cumple HOY.
  *   2. La pantalla muestra un botón por cliente que abre WhatsApp con el mensaje ya escrito.
@@ -52,7 +53,7 @@ public class CuponService {
 
     public CuponService(CuponRepository cupones, ClienteRepository clientes, ClienteService clienteService,
                         @Value("${app.promociones.cumpleanos-porcentaje:15}") int porcentajeCumple,
-                        @Value("${app.promociones.cumpleanos-dias-vigencia:30}") int diasVigencia) {
+                        @Value("${app.promociones.cumpleanos-dias-validez:2}") int diasVigencia) {
         this.cupones = cupones;
         this.clientes = clientes;
         this.clienteService = clienteService;
@@ -76,13 +77,18 @@ public class CuponService {
         LocalDateTime inicioDeAnio = hoy.withDayOfYear(1).atStartOfDay();
         for (Cliente c : clientes.cumpleanerosDel(hoy.getMonthValue(), hoy.getDayOfMonth())) {
             if (!cupones.existsByClienteIdAndTipoAndCreadoAfter(c.getId(), TipoCupon.CUMPLEANOS, inicioDeAnio)) {
-                cupones.save(new Cupon(codigoNuevo("CUMPLE"), TipoCupon.CUMPLEANOS, porcentajeCumple, c, hoy.plusDays(diasVigencia)));
+                // Días de validez CONTANDO el del cumpleaños: 2 = su cumpleaños y el día siguiente.
+                cupones.save(new Cupon(codigoNuevo("CUMPLE"), TipoCupon.CUMPLEANOS, porcentajeCumple, c, hoy.plusDays(Math.max(1, diasVigencia) - 1)));
                 log.info("Cupón de cumpleaños generado para {}", c.getNombre());
             }
         }
     }
 
-    /** Cumpleañeros de hoy y de los próximos días (para avisar con tiempo). */
+    /**
+     * Cumpleañeros de hoy y de los próximos días (para avisar con tiempo).
+     * También incluye a los de AYER cuyo cupón todavía vale hoy: como el cupón dura dos días,
+     * si ayer no se les felicitó, hoy es la última oportunidad de avisarles.
+     */
     @Transactional
     public List<Cumpleanero> cumpleaneros(int diasAdelante) {
         generarCuponesDeHoy();
@@ -90,13 +96,17 @@ public class CuponService {
         LocalDateTime inicioDeAnio = hoy.withDayOfYear(1).atStartOfDay();
         List<Cumpleanero> lista = new ArrayList<>();
 
-        for (int i = 0; i <= diasAdelante; i++) {
+        for (int i = -1; i <= diasAdelante; i++) {
             LocalDate dia = hoy.plusDays(i);
             for (Cliente c : clientes.cumpleanerosDel(dia.getMonthValue(), dia.getDayOfMonth())) {
                 int anos = Period.between(c.getFechaNacimiento(), dia).getYears();
-                Cupon cupon = i == 0
+                Cupon cupon = i <= 0
                         ? cupones.findFirstByClienteIdAndTipoAndCreadoAfterOrderByCreadoDesc(c.getId(), TipoCupon.CUMPLEANOS, inicioDeAnio).orElse(null)
                         : null;
+                // Los de ayer solo interesan si su cupón sigue sirviendo hoy.
+                if (i < 0 && (cupon == null || cupon.vencido() || cupon.usado())) {
+                    continue;
+                }
                 lista.add(new Cumpleanero(c.getId(), c.getNombre(), c.getCelular(), dia, anos, i == 0,
                         cupon == null ? null : cupon.getCodigo(),
                         cupon == null ? null : cupon.getPorcentaje(),
@@ -180,11 +190,23 @@ public class CuponService {
         return codigo;
     }
 
+    /** "Válido hoy y mañana", "Válido solo hoy" o "Válido hasta el 14 de noviembre", según corresponda. */
+    private String validez(Cupon cupon) {
+        LocalDate hoy = LocalDate.now();
+        if (cupon.getVigenteHasta().equals(hoy)) {
+            return "Válido solo hoy.";
+        }
+        if (cupon.getVigenteHasta().equals(hoy.plusDays(1))) {
+            return "Válido hoy y mañana.";
+        }
+        return "Válido hasta el " + cupon.getVigenteHasta().format(FECHA) + ".";
+    }
+
     private String enlaceWhatsapp(Cliente c, Cupon cupon) {
         String primerNombre = c.getNombre().split(" ")[0];
         String mensaje = "¡Feliz cumpleaños, " + primerNombre + "! 🎉 En Óptica RODRÍGUEZ queremos celebrarte: "
                 + "tienes " + cupon.getPorcentaje() + "% de descuento en tus lentes con el código "
-                + cupon.getCodigo() + ". Válido hasta el " + cupon.getVigenteHasta().format(FECHA) + ". ¡Te esperamos!";
+                + cupon.getCodigo() + ". " + validez(cupon) + " ¡Te esperamos!";
         return "https://wa.me/52" + c.getCelular() + "?text=" + URLEncoder.encode(mensaje, StandardCharsets.UTF_8).replace("+", "%20");
     }
 }

@@ -1,6 +1,7 @@
 package mx.rodriguezammi.optica.armazon;
 
 import jakarta.validation.Valid;
+import mx.rodriguezammi.comun.Eliminado;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -22,7 +23,7 @@ import java.util.List;
  *   POST   /api/optica/armazones                                crear
  *   PUT    /api/optica/armazones/{id}                           editar
  *   POST   /api/optica/armazones/{id}/foto   (multipart)        subir/cambiar foto
- *   DELETE /api/optica/armazones/{id}                           desactivar
+ *   DELETE /api/optica/armazones/{id}                           eliminar (o archivar si ya se vendió)
  *   GET    /api/publico/armazones/{id}/foto                     ver la foto
  *
  * ¿Por qué la foto es "pública"? Porque la etiqueta <img src="..."> del navegador no puede
@@ -71,10 +72,10 @@ public class ArmazonController {
         return servicio.cambiarFoto(id, foto);
     }
 
+    /** Elimina (o archiva, si ya está en alguna orden). Ver ArmazonService.eliminar. */
     @DeleteMapping("/api/optica/armazones/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void desactivar(@PathVariable Long id) {
-        servicio.desactivar(id);
+    public Eliminado eliminar(@PathVariable Long id) {
+        return servicio.eliminar(id);
     }
 
     @GetMapping("/api/publico/armazones/{id}/foto")

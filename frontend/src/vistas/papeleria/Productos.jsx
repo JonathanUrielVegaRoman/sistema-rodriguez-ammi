@@ -24,6 +24,7 @@ export default function Productos({ consulta }) {
   const [formulario, setFormulario] = useState(VACIO)
   const [editando, setEditando] = useState(null)
   const [error, setError] = useState("")
+  const [aviso, setAviso] = useState("")
   const [historial, setHistorial] = useState(null) // { producto, movimientos } del producto abierto
 
   function cargar() {
@@ -88,6 +89,19 @@ export default function Productos({ consulta }) {
     }
   }
 
+  async function eliminar() {
+    if (!window.confirm(`¿Eliminar "${formulario.nombre}" del inventario?`)) return
+    setError("")
+    try {
+      const r = await productosApi.desactivar(editando)
+      setAviso(r?.mensaje ?? "")
+      setEditando(null)
+      cargar()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   // Historial: cada entrada y salida del producto (ver MovimientoInventario.java en el backend).
   async function verHistorial(p) {
     setError("")
@@ -109,6 +123,8 @@ export default function Productos({ consulta }) {
         <h1 className="titulo-seccion">Inventario</h1>
         <button className="btn btn--primario" onClick={abrirNuevo}>+ Producto</button>
       </div>
+
+      {aviso && <p className="alerta alerta--exito">{aviso}</p>}
 
       <div className="panel">
         <div className="filtros">
@@ -210,6 +226,15 @@ export default function Productos({ consulta }) {
               {editando === "nuevo" ? "Agregar producto" : "Guardar cambios"}
             </button>
           </form>
+          {editando !== "nuevo" && (
+            <div className="zona-peligro">
+              <p className="texto-tenue">
+                Si el producto nunca se vendió, se borra por completo. Si ya tiene ventas, solo se quita del
+                inventario y los tickets anteriores se conservan.
+              </p>
+              <button className="btn btn--peligro" type="button" onClick={eliminar}>Eliminar producto</button>
+            </div>
+          )}
         </Modal>
       )}
     </section>

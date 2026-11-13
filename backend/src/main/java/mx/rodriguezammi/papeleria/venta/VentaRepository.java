@@ -2,6 +2,8 @@ package mx.rodriguezammi.papeleria.venta;
 
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,6 +23,10 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
 
     @EntityGraph(attributePaths = "detalles")
     Optional<Venta> findWithDetallesById(Long id);
+
+    /** ¿Este producto aparece en alguna venta? (si sí, no se puede borrar de verdad) */
+    @Query("SELECT COUNT(d) > 0 FROM DetalleVenta d WHERE d.producto.id = :productoId")
+    boolean existeVentaDeProducto(@Param("productoId") Long productoId);
 
     /** ¿Ya se registró un cobro con esta clave? (para no cobrar doble si el celular reintenta) */
     @EntityGraph(attributePaths = "detalles")

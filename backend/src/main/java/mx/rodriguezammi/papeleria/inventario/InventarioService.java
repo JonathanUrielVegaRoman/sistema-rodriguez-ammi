@@ -37,6 +37,12 @@ public class InventarioService {
         movimientos.save(new MovimientoInventario(producto, tipo, cantidad, nota));
     }
 
+    /** Borra el historial de un producto que se va a eliminar por completo. */
+    @Transactional
+    public void borrarHistorial(Long productoId) {
+        movimientos.deleteByProductoId(productoId);
+    }
+
     @Transactional(readOnly = true)
     public List<Movimiento> historial(Long productoId) {
         return movimientos.findTop50ByProductoIdOrderByFechaDescIdDesc(productoId).stream()

@@ -1,6 +1,7 @@
 package mx.rodriguezammi.papeleria.producto;
 
 import jakarta.validation.Valid;
+import mx.rodriguezammi.comun.Eliminado;
 import mx.rodriguezammi.papeleria.inventario.InventarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -27,7 +28,7 @@ import java.util.List;
  *   POST    /api/papeleria/productos               crea uno nuevo
  *   PUT     /api/papeleria/productos/{id}          edita uno existente
  *   POST    /api/papeleria/productos/{id}/resurtir suma existencia
- *   DELETE  /api/papeleria/productos/{id}          lo desactiva
+ *   DELETE  /api/papeleria/productos/{id}          lo elimina (o lo archiva si ya tiene ventas)
  *
  * REST en una frase: "usar los verbos de HTTP (GET leer, POST crear, PUT editar,
  * DELETE borrar) sobre rutas que representan COSAS (sustantivos), no acciones."
@@ -83,9 +84,9 @@ public class ProductoController {
         return servicio.resurtir(id, datos.cantidad());
     }
 
+    /** Elimina (o archiva, si ya tiene ventas). Ver ProductoService.eliminar. */
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void desactivar(@PathVariable Long id) {
-        servicio.desactivar(id);
+    public Eliminado eliminar(@PathVariable Long id) {
+        return servicio.eliminar(id);
     }
 }

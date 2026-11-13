@@ -1,6 +1,8 @@
 package mx.rodriguezammi.optica.armazon;
 
+import mx.rodriguezammi.comun.Eliminado;
 import mx.rodriguezammi.comun.archivos.AlmacenArchivos;
+import mx.rodriguezammi.optica.orden.OrdenRepository;
 import mx.rodriguezammi.comun.exception.RecursoNoEncontradoException;
 import mx.rodriguezammi.comun.exception.ReglaDeNegocioException;
 import org.springframework.stereotype.Service;
@@ -22,10 +24,12 @@ public class ArmazonService {
 
     private final ArmazonRepository repositorio;
     private final AlmacenArchivos archivos;
+    private final OrdenRepository ordenes;
 
-    public ArmazonService(ArmazonRepository repositorio, AlmacenArchivos archivos) {
+    public ArmazonService(ArmazonRepository repositorio, AlmacenArchivos archivos, OrdenRepository ordenes) {
         this.repositorio = repositorio;
         this.archivos = archivos;
+        this.ordenes = ordenes;
     }
 
     /**
@@ -87,9 +91,25 @@ public class ArmazonService {
         return archivos.ruta(CARPETA_FOTOS, a.getFotoArchivo());
     }
 
+    /**
+     * ELIMINAR un armazón del catálogo.
+     *   - Si nunca se usó en una orden → se borra de verdad, junto con su foto.
+     *   - Si ya está en alguna orden → se ARCHIVA: sale del catálogo pero las órdenes lo conservan.
+     *     Se le agrega "(baja)" al código para que ese código se pueda volver a usar.
+     */
     @Transactional
-    public void desactivar(Long id) {
-        buscarEntidad(id).setActivo(false);
+    public Eliminado eliminar(Long id) {
+        Armazon a = bloquearEntidad(id);
+        String codigo = a.getCodigo();
+        if (ordenes.existeOrdenConArmazon(id)) {
+            a.setActivo(false);
+            String sufijo = " (baja " + a.getId() + ")";
+            a.setCodigo(codigo.substring(0, Math.min(codigo.length(), 40 - sufijo.length())) + sufijo);
+            return Eliminado.archivado("El armazón " + codigo);
+        }
+        archivos.borrar(CARPETA_FOTOS, a.getFotoArchivo());
+        repositorio.delete(a);
+        return Eliminado.borrado("El armazón " + codigo);
     }
 
     /** Con candado: úsalo antes de cambiar la existencia (al crear o cancelar una orden). */

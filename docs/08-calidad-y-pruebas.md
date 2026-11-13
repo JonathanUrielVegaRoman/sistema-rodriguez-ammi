@@ -30,7 +30,7 @@
 ## 3. Las pruebas automáticas
 
 ```bash
-cd backend  && ./mvnw test     # 27 pruebas (≈ 1 minuto)
+cd backend  && ./mvnw test     # 33 pruebas (≈ 1 minuto)
 cd frontend && npm test        # 20 pruebas (≈ 1 segundo)
 ```
 
@@ -43,12 +43,33 @@ cd frontend && npm test        # 20 pruebas (≈ 1 segundo)
 | `RobustezTest` | Cobros repetidos, historial de inventario, límites del buzón, direcciones disfrazadas |
 | `AccesoTest` | Sin PIN no se ve nada; con PIN no se ven reportes; con contraseña sí |
 | `NuevasFuncionesTest` | Eliminar clientes; el Excel trae fecha y hora reales |
+| `EliminarYCumpleanosTest` | Eliminar productos y armazones (borrar si nunca se vendió, archivar si ya se vendió, el código queda libre, las impresiones del buzón no se eliminan); medidas `52-18-140`; el cupón de cumpleaños vale dos días |
 | `ImpresoraServiceTest` | Rangos de páginas ("1-3,5") y tope de memoria al imprimir |
 | `geometriaArmazon.test.js` | El modelo 3D mide lo que dicen las medidas, en las 6 formas |
 | `utilidades.test.js` | Dinero, graduaciones, fechas sin error de zona horaria, rutas |
 
 Además, **GitHub corre todas las pruebas solo** en cada push (`.github/workflows/ci.yml`).
 Una ✗ roja junto a un commit significa "esto rompió algo: no lo lleves al negocio".
+
+### Si el editor marca archivos en rojo
+
+El editor (VS Code, IntelliJ) guarda su propia "foto" del proyecto. Cuando se crean o cambian
+archivos **desde fuera del editor** (por ejemplo con `git pull` o con una IA), esa foto se queda
+vieja y marca errores que no existen: típicamente "no encuentro la clase X" en el archivo que usa
+una clase nueva, y de rebote en los archivos que usan a ese.
+
+Quien manda es Maven, no el color del editor:
+
+```bash
+cd backend && ./mvnw compile
+```
+
+Si termina sin errores, el código está bien y solo hay que refrescar el editor:
+
+- **VS Code:** `Ctrl+Shift+P` → `Java: Clean Java Language Server Workspace` → *Reload and delete*.
+- **IntelliJ:** clic derecho en `pom.xml` → *Maven → Reload project* (o *File → Invalidate Caches*).
+
+Si `./mvnw compile` **sí** marca error, entonces es real: el mensaje dice archivo y línea.
 
 ## 4. Lo que NO está comprobado (honestidad ante todo)
 

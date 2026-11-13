@@ -8,4 +8,6 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
 
     /** Los 50 movimientos más recientes de un producto. */
     List<MovimientoInventario> findTop50ByProductoIdOrderByFechaDescIdDesc(Long productoId);
+
+    void deleteByProductoId(Long productoId);
 }

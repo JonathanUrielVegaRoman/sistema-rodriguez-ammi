@@ -7,7 +7,8 @@ import java.math.BigDecimal;
 /**
  * ARMAZÓN (montura) en exhibición o bodega.
  *
- * Las 3 medidas vienen grabadas en la varilla, por ejemplo "52□18 140":
+ * Las 3 medidas vienen grabadas en la varilla. En el armazón aparecen como "52□18 140" (el
+ * cuadrito es un símbolo del fabricante); en pantalla se muestran como "52-18-140":
  *   anchoLente = 52 mm  (ancho de cada mica)
  *   puente     = 18 mm  (espacio entre micas, sobre la nariz)
  *   varilla    = 140 mm (largo de la patita)
@@ -86,12 +87,12 @@ public class Armazon {
         this.precio = precio;
     }
 
-    /** Texto tipo "52□18 140" para mostrar en pantalla. */
+    /** Texto tipo "52-18-140" (lente - puente - varilla) para mostrar en pantalla. */
     public String getMedidas() {
         if (anchoLente == null || puente == null) {
             return null;
         }
-        return anchoLente + "□" + puente + (varilla != null ? " " + varilla : "");
+        return anchoLente + "-" + puente + (varilla != null ? "-" + varilla : "");
     }
 
     public Long getId() { return id; }

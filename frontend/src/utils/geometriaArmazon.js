@@ -1,7 +1,7 @@
 /*
   GEOMETRÍA DE UN ARMAZÓN a partir de sus medidas (todo en milímetros).
 
-  Aquí NO hay nada de 3D todavía: solo matemáticas que convierten "52 □ 18 140, cuadrado"
+  Aquí NO hay nada de 3D todavía: solo matemáticas que convierten "52-18-140, cuadrado"
   en el contorno del lente y las dimensiones del armazón. El componente Armazon3D.jsx toma
   estos contornos y los "extruye" (les da grosor) para dibujar el modelo.
 

@@ -1,9 +1,11 @@
 package mx.rodriguezammi.papeleria.producto;
 
+import mx.rodriguezammi.comun.Eliminado;
 import mx.rodriguezammi.comun.exception.RecursoNoEncontradoException;
 import mx.rodriguezammi.comun.exception.ReglaDeNegocioException;
 import mx.rodriguezammi.papeleria.inventario.InventarioService;
 import mx.rodriguezammi.papeleria.inventario.MovimientoInventario;
+import mx.rodriguezammi.papeleria.venta.VentaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,17 +33,22 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class ProductoService {
 
+    /** Los códigos que empiezan así son productos que el propio sistema necesita (ver DatosIniciales). */
+    private static final String PREFIJO_DEL_SISTEMA = "SRV-";
+
     private final ProductoRepository repositorio;
     private final InventarioService inventario;
+    private final VentaRepository ventas;
 
     /**
      * INYECCIÓN DE DEPENDENCIAS por constructor:
      * nosotros no hacemos "new ProductoRepository()"; Spring ve que lo pedimos aquí
      * y nos lo entrega ya listo.
      */
-    public ProductoService(ProductoRepository repositorio, InventarioService inventario) {
+    public ProductoService(ProductoRepository repositorio, InventarioService inventario, VentaRepository ventas) {
         this.repositorio = repositorio;
         this.inventario = inventario;
+        this.ventas = ventas;
     }
 
     public List<ProductoDto.Respuesta> listar(String busqueda) {
@@ -103,10 +110,28 @@ public class ProductoService {
         return ProductoDto.Respuesta.desde(producto);
     }
 
-    /** "Borrado lógico": se oculta, pero sigue existiendo para el historial de ventas. */
+    /**
+     * ELIMINAR un producto del inventario.
+     *   - Si nunca se vendió → se borra de verdad (con su historial de movimientos).
+     *   - Si ya tiene ventas → se ARCHIVA: desaparece del inventario y de la pantalla de venta,
+     *     pero los tickets y reportes anteriores lo conservan. Se libera su código de barras
+     *     para poder usarlo en otro producto.
+     *   - Los productos "del sistema" (las impresiones que cobra el buzón) no se pueden eliminar.
+     */
     @Transactional
-    public void desactivar(Long id) {
-        buscarEntidad(id).setActivo(false);
+    public Eliminado eliminar(Long id) {
+        Producto producto = bloquearEntidad(id);
+        if (producto.getCodigoBarras() != null && producto.getCodigoBarras().startsWith(PREFIJO_DEL_SISTEMA)) {
+            throw new ReglaDeNegocioException("\"" + producto.getNombre() + "\" lo usa el buzón de impresión para cobrar, así que no se puede eliminar. Sí puedes cambiarle el precio.");
+        }
+        if (ventas.existeVentaDeProducto(id)) {
+            producto.setActivo(false);
+            producto.setCodigoBarras(null);
+            return Eliminado.archivado(producto.getNombre());
+        }
+        inventario.borrarHistorial(id);
+        repositorio.delete(producto);
+        return Eliminado.borrado(producto.getNombre());
     }
 
     /**

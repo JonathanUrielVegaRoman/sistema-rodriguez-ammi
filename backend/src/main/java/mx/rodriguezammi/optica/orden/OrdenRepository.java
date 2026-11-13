@@ -25,6 +25,10 @@ public interface OrdenRepository extends JpaRepository<OrdenLentes, Long> {
 
     Optional<OrdenLentes> findByClaveUnica(String claveUnica);
 
+    /** ¿Este armazón aparece en alguna orden? (si sí, no se puede borrar de verdad) */
+    @Query("SELECT COUNT(p) > 0 FROM PartidaLente p WHERE p.armazon.id = :armazonId")
+    boolean existeOrdenConArmazon(@Param("armazonId") Long armazonId);
+
     @Query("SELECT p FROM PagoOrden p JOIN FETCH p.orden WHERE p.claveUnica = :clave")
     Optional<PagoOrden> pagoPorClave(@Param("clave") String clave);
 
