@@ -1,0 +1,7 @@
+# Copia este archivo junto al .jar con el nombre application.properties
+# y cambia los tres valores en mayúsculas. NO lo subas a GitHub.
+spring.datasource.url=jdbc:postgresql://localhost:5432/rodriguez_ammi
+spring.datasource.username=postgres
+spring.datasource.password=CONTRASEÑA_DE_POSTGRES
+app.acceso.pin=PIN_DEL_PERSONAL
+app.acceso.admin-password=CONTRASEÑA_DEL_DUEÑO

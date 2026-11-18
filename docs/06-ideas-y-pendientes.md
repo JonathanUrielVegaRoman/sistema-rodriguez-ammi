@@ -73,7 +73,7 @@ o en la terminal. Opciones para crecer, de menor a mayor esfuerzo:
 2. **Respaldos automáticos**: tarea de Windows que ejecute `pg_dump` cada noche y copie el archivo (y la carpeta de
    fotos `C:/sistema-rodriguez-ammi-datos/archivos/armazones`) a una USB o a Google Drive.
    **Sin respaldos, si se descompone el disco se pierde todo.**
-3. **Arranque automático**: que el sistema se encienda solo al prender la PC (tarea programada de Windows o servicio con WinSW).
+3. ✅ **Arranque automático**: servicio de Windows con WinSW (`instalacion/sistema-servicio.xml`). Probado en la PC de desarrollo; falta en la del negocio.
 4. **IP fija** de la PC en el módem (reserva DHCP). Si cambia, el QR del mostrador deja de funcionar.
 5. **Red de invitados** para los clientes del buzón, si el módem lo permite. Hoy el PIN protege los datos, pero
    aislar la red es una capa extra.

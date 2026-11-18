@@ -98,11 +98,27 @@
     </dependencies>
 
     <build>
+        <!-- El .jar se llama siempre "sistema.jar": así, al actualizar, solo se reemplaza el archivo. -->
+        <finalName>sistema</finalName>
         <plugins>
             <!-- Empaqueta todo en un .jar ejecutable. -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!--
+              application-local.properties tiene las contraseñas de TU computadora: sirve para
+              "mvnw spring-boot:run -Dspring-boot.run.profiles=local", pero NO debe viajar dentro
+              del .jar que se lleva al negocio (allá se usa su propio application.properties).
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/application-local.properties</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
         </plugins>
     </build>

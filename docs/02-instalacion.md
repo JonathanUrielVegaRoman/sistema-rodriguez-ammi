@@ -77,12 +77,12 @@ Abre http://localhost:5173.
    ```
 2. Empaquetar el backend en un solo archivo:
    ```bash
-   cd ../backend && ./mvnw clean package -DskipTests
+   cd ../backend && ./mvnw clean package     # también corre las pruebas: si fallan, no hay .jar
    ```
-   Resultado: `backend/target/sistema-0.1.0.jar`.
+   Resultado: `backend/target/sistema.jar`.
 3. En la PC del negocio:
    ```bash
-   java -jar sistema-0.1.0.jar
+   java -jar sistema.jar
    ```
 4. Desde los celulares: `http://IP-DE-LA-PC:8080`. Para saber la IP, en la PC ejecuta `ipconfig`
    y busca "Dirección IPv4" (algo como `192.168.1.50`).
@@ -90,4 +90,9 @@ Abre http://localhost:5173.
 Detalles importantes para la PC del negocio (ver también `06-ideas-y-pendientes.md`):
 - **IP fija**: en el módem/router, "reservar" la IP de la PC; si cambia, los celulares no la encuentran.
 - **Firewall de Windows**: la primera vez que se ejecuta pregunta si se permite la conexión; elegir **Redes privadas**.
-- **Arranque automático** y **respaldos diarios**: pendiente de configurar.
+- **Arranque automático**: el sistema se instala como **servicio de Windows** con WinSW
+  (plantilla en `instalacion/sistema-servicio.xml`).
+- **Respaldos diarios**: no hay automáticos (decisión del dueño); se hacen a mano.
+
+> 📘 El paso a paso completo, pensado para hacerlo en el negocio, está en
+> **`docs/manual/Manual-de-instalacion.pdf`** (también en Word).

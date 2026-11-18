@@ -1,0 +1,46 @@
+<!--
+  SERVICIO DE WINDOWS para el sistema (lo lee WinSW: https://github.com/winsw/winsw).
+
+  Va en la misma carpeta que:
+    - sistema.jar                (el sistema)
+    - application.properties     (contraseñas de ESTA computadora)
+    - sistema-servicio.exe       (WinSW-x64.exe renombrado; DEBE llamarse igual que este .xml)
+
+  Comandos (PowerShell COMO ADMINISTRADOR, dentro de la carpeta):
+    .\sistema-servicio.exe install     instalarlo (una sola vez)
+    .\sistema-servicio.exe start       encenderlo
+    .\sistema-servicio.exe status      ¿está encendido?
+    .\sistema-servicio.exe stop        apagarlo (para actualizar el .jar)
+    .\sistema-servicio.exe uninstall   quitarlo de Windows
+-->
+<service>
+  <id>SistemaRodriguezAmmi</id>
+  <name>Sistema Rodriguez AMMI</name>
+  <description>Sistema de la Óptica Rodríguez y la Papelería AMMI. Los celulares lo usan en el puerto 8080.</description>
+
+  <!-- "java" debe estar en el PATH del sistema (el instalador de Java lo agrega). -->
+  <executable>java</executable>
+  <arguments>-jar "%BASE%\sistema.jar"</arguments>
+  <!-- Carpeta de trabajo = esta carpeta, para que Spring encuentre application.properties. -->
+  <workingdirectory>%BASE%</workingdirectory>
+
+  <!-- Arranca solo al prender la PC, aunque nadie inicie sesión, y DESPUÉS de PostgreSQL. -->
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <depend>postgresql-x64-18</depend>
+
+  <!-- Si se cae, Windows lo vuelve a encender. -->
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="30 sec"/>
+  <resetfailure>1 hour</resetfailure>
+
+  <!-- Al apagarlo, darle tiempo de terminar lo que esté haciendo (por ejemplo, una venta). -->
+  <stoptimeout>20 sec</stoptimeout>
+
+  <!-- Lo que antes se veía en la ventana negra queda en archivos dentro de la carpeta "logs". -->
+  <logpath>%BASE%\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>5</keepFiles>
+  </log>
+</service>
